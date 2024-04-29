@@ -33,23 +33,15 @@ public class NoticeStorageClient {
 
     private BlobContainerClient blobContainerClient;
 
-    private Integer maxRetry;
-
-    private Integer timeout;
-
     @Autowired
     public NoticeStorageClient(
             @Value("${spring.cloud.azure.storage.blob.notices.enabled}") String enabled,
             @Value("${spring.cloud.azure.storage.blob.notices.connection_string}") String connectionString,
-            @Value("${spring.cloud.azure.storage.blob.notices.containerName}") String containerName,
-            @Value("${spring.cloud.azure.storage.blob.notices.retry}") Integer maxRetry,
-            @Value("${spring.cloud.azure.storage.blob.notices.timeout}") Integer timeout) {
+            @Value("${spring.cloud.azure.storage.blob.notices.containerName}") String containerName) {
         if (Boolean.TRUE.toString().equals(enabled)) {
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                     .connectionString(connectionString).buildClient();
             blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
-            this.maxRetry = maxRetry;
-            this.timeout = timeout;
         }
     }
     public NoticeStorageClient(
@@ -57,8 +49,6 @@ public class NoticeStorageClient {
             BlobContainerClient blobContainerClient) {
         if (Boolean.TRUE.equals(enabled)) {
              this.blobContainerClient = blobContainerClient;
-             this.maxRetry=3;
-             this.timeout=10;
         }
     }
 
