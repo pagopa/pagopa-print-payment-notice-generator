@@ -1,20 +1,26 @@
 package it.gov.pagopa.payment.notice.generator.storage;
 
+import com.azure.core.http.rest.Response;
 import com.azure.core.util.Context;
+import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.models.BlockBlobItem;
 import com.azure.storage.blob.models.DownloadRetryOptions;
 import com.azure.storage.blob.options.BlobDownloadToFileOptions;
+import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -57,63 +63,28 @@ public class NoticeStorageClient {
     }
 
     /**
-     * Retrieve the template from the Blob Storage
+     * Handles saving the PDF to the blob storage
      *
-     * @param institutionCode the name of the institution to be retrieved
-     * @return the File with the reference to the downloaded data
-     * @throws AppException thrown for error when retrieving the data
+     * @param pdf      PDF file
+     * @param fileName Filename to save the PDF with
+     * @return blob storage response with PDF metadata or error message and status
      */
-    public File getTemplate(String institutionCode) {
+    public boolean savePdfToBlobStorage(InputStream pdf, String fileName) {
 
-        if (blobContainerClient == null) {
-            throw new AppException(AppError.TEMPLATE_CLIENT_UNAVAILABLE);
-        }
-        String filePath = createTempDirectory(institutionCode);
-        try {
-            blobContainerClient.getBlobClient(institutionCode.concat("/data.zip"))
-                    .downloadToFileWithResponse(
-                    getBlobDownloadToFileOptions(filePath),
-                    Duration.ofSeconds(timeout),
-                    Context.NONE);
-            return new File(filePath);
-        } catch (BlobStorageException blobStorageException) {
-            throw new AppException(AppError.TEMPLATE_NOT_FOUND, blobStorageException);
-        }
-    }
+        //Get a reference to a blob
+        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
 
-    private BlobDownloadToFileOptions getBlobDownloadToFileOptions(String filePath) {
-        return new BlobDownloadToFileOptions(filePath)
-                .setDownloadRetryOptions(new DownloadRetryOptions().setMaxRetryRequests(maxRetry))
-                .setOpenOptions(new HashSet<>(
-                        Arrays.asList(
-                                StandardOpenOption.CREATE_NEW,
-                                StandardOpenOption.WRITE,
-                                StandardOpenOption.READ
-                        ))
-                );
-    }
+        //Upload the blob
+        Response<BlockBlobItem> blockBlobItemResponse = blobClient.uploadWithResponse(
+                new BlobParallelUploadOptions(
+                        pdf
+                ), null, null);
 
-    private String createTempDirectory(String templateId) {
-        try {
-            File workingDirectory = createWorkingDirectory();
-            Path tempDirectory = Files.createTempDirectory(workingDirectory.toPath(), "notice-generator")
-                    .normalize().toAbsolutePath();
-            Path filePath = tempDirectory.resolve(templateId + ".zip").normalize().toAbsolutePath();
-            if (!filePath.startsWith(tempDirectory + File.separator)) {
-                throw new IllegalArgumentException("Invalid filename");
-            }
-            return filePath.toFile().getAbsolutePath();
-        } catch (IOException e) {
-            throw new AppException(AppError.TEMPLATE_CLIENT_ERROR, e);
-        }
-    }
+        //Build response accordingly
+        int statusCode = blockBlobItemResponse.getStatusCode();
 
-    private File createWorkingDirectory() throws IOException {
-        File workingDirectory = new File("temp");
-        if (!workingDirectory.exists()) {
-            Files.createDirectory(workingDirectory.toPath());
-        }
-        return workingDirectory;
+        return statusCode == HttpStatus.CREATED.value();
+
     }
 
 }

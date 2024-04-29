@@ -33,6 +33,6 @@ public class Notice {
     private String code;
 
     @Schema(description = "Notice installments (if present)")
-    private List<Installments> installments;
+    private List<InstallmentData> installments;
 
 }

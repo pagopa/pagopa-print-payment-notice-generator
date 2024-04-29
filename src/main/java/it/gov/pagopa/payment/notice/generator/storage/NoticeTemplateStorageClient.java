@@ -9,8 +9,10 @@ import com.azure.storage.blob.models.DownloadRetryOptions;
 import com.azure.storage.blob.options.BlobDownloadToFileOptions;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -21,9 +23,11 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
+
+import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
 @Component
+@Slf4j
 public class NoticeTemplateStorageClient {
 
     private BlobContainerClient blobContainerClient;
@@ -69,13 +73,15 @@ public class NoticeTemplateStorageClient {
         if (blobContainerClient == null) {
             throw new AppException(AppError.TEMPLATE_CLIENT_UNAVAILABLE);
         }
-        String filePath = createTempDirectory(templateId);
+        String filePath = createTemplatesDirectory(templateId);
         try {
-            blobContainerClient.getBlobClient(templateId.concat("/template.zip"))
-                    .downloadToFileWithResponse(
-                    getBlobDownloadToFileOptions(filePath),
-                    Duration.ofSeconds(timeout),
-                    Context.NONE);
+            if (!new File(filePath).exists()) {
+                blobContainerClient.getBlobClient(templateId.concat("/template.zip"))
+                        .downloadToFileWithResponse(
+                                getBlobDownloadToFileOptions(filePath),
+                                Duration.ofSeconds(timeout),
+                                Context.NONE);
+            }
             return new File(filePath);
         } catch (BlobStorageException blobStorageException) {
             throw new AppException(AppError.TEMPLATE_NOT_FOUND, blobStorageException);
@@ -94,13 +100,12 @@ public class NoticeTemplateStorageClient {
                 );
     }
 
-    private String createTempDirectory(String templateId) {
+    private String createTemplatesDirectory(String templateId) {
         try {
             File workingDirectory = createWorkingDirectory();
-            Path tempDirectory = Files.createTempDirectory(workingDirectory.toPath(), "notice-generator")
-                    .normalize().toAbsolutePath();
-            Path filePath = tempDirectory.resolve(templateId + ".zip").normalize().toAbsolutePath();
-            if (!filePath.startsWith(tempDirectory + File.separator)) {
+            Path filePath = workingDirectory.toPath().resolve(
+                    "templates/"+templateId + ".zip").normalize().toAbsolutePath();
+            if (!filePath.startsWith(workingDirectory + File.separator)) {
                 throw new IllegalArgumentException("Invalid filename");
             }
             return filePath.toFile().getAbsolutePath();
@@ -109,12 +114,14 @@ public class NoticeTemplateStorageClient {
         }
     }
 
-    private File createWorkingDirectory() throws IOException {
-        File workingDirectory = new File("temp");
-        if (!workingDirectory.exists()) {
-            Files.createDirectory(workingDirectory.toPath());
+    @Scheduled(cron = "${spring.cloud.azure.storage.blob.templates.timeout}")
+    private void refreshTemplates() {
+        File templateFiles = new File("temp/templates");
+        if (templateFiles.exists()) {
+            if (!templateFiles.delete()) {
+                log.warn("Error while deleting template directory");
+            }
         }
-        return workingDirectory;
     }
 
 }

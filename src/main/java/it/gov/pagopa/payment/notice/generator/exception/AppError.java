@@ -20,7 +20,13 @@ public enum AppError {
             "Template Client encountered an error"),
 
     FOLDER_NOT_AVAILABLE(HttpStatus.NOT_FOUND, "Folder Not Available",
-            "Required folder is either missing or not available to the requirer"),
+            "Required folder is either missing or not available to require"),
+
+    INSTITUTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Institution Not Found",
+            "Required institution data has not been found on the storage"),
+
+    INSTITUTION_PARSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Parsing Error for Institution Data",
+            "Exception thrown while parsing institution data retrieve from storage"),
     UNKNOWN(null, null, null);
 
   public final HttpStatus httpStatus;
