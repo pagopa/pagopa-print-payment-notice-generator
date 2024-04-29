@@ -23,17 +23,25 @@ public class TemplateDataMapper {
                         .channel(Channel.builder().online(
                                 Online.builder()
                                         .website(noticeRequestData.getCreditorInstitution().getWebChannel())
-                                        .build()
-                                ).build())
+                                        .app(!noticeRequestData.getCreditorInstitution().getWebChannel())
+                                        .build())
+                                .physical(Physical.builder()
+                                        .data(noticeRequestData.getCreditorInstitution().getPhysicalChannel())
+                                        .build())
+                                .build()
+                        )
+                        .logo(noticeRequestData.getCreditorInstitution().getLogo())
+                        .additionalInfo(noticeRequestData.getCreditorInstitution().getInfo())
+                        .sector(noticeRequestData.getCreditorInstitution().getOrganization())
                         .build()
                 )
                 .debtor(Debtor
                         .builder()
-                        .buildingNumber("") //TODO
-                        .province("") //TODO
-                        .city("") //TODO
-                        .postalCode("") //TODO
-                        .address("") //TODO
+                        .buildingNumber(noticeRequestData.getDebtor().getBuildingNumber())
+                        .province(noticeRequestData.getDebtor().getProvince())
+                        .city(noticeRequestData.getDebtor().getCity())
+                        .postalCode(noticeRequestData.getDebtor().getPostalCode())
+                        .address(noticeRequestData.getDebtor().getAddress())
                         .fullName(noticeRequestData.getDebtor().getFullName())
                         .taxCode(noticeRequestData.getDebtor().getTaxCode())
                         .build()

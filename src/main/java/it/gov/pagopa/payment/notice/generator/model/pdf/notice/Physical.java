@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Channel {
+public class Physical {
 
-    private Online online;
-    private Physical physical;
+    private String data;
 
 }

@@ -7,7 +7,6 @@ import it.gov.pagopa.payment.notice.generator.service.NoticeGenerationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -20,6 +19,8 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+
+import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.clearTempDirectory;
 
 @RestController
 @RequestMapping(value = "/notices", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -52,14 +53,5 @@ public class NoticeGenerationController {
             clearTempDirectory(file.toPath().getParent());
         }
     }
-
-    private void clearTempDirectory(java.nio.file.Path workingDirPath) {
-        try {
-            FileUtils.deleteDirectory(workingDirPath.toFile());
-        } catch (IOException e) {
-            log.warn("Unable to clear working directory", e);
-        }
-    }
-
 
 }

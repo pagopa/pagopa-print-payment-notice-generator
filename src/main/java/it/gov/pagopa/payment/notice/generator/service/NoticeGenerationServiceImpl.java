@@ -10,6 +10,7 @@ import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.mapper.TemplateDataMapper;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
+import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
 import it.gov.pagopa.payment.notice.generator.model.notice.CreditorInstitution;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineRequest;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineResponse;
@@ -34,6 +35,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
+import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.clearTempDirectory;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
 @Service
@@ -89,10 +91,12 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             }
         }
 
+        Path tempDirectory = null;
+
         try {
 
             File workingDirectory = createWorkingDirectory();
-            Path tempDirectory = Files.createTempDirectory(workingDirectory.toPath(), "notice-generator")
+            tempDirectory = Files.createTempDirectory(workingDirectory.toPath(), "notice-generator")
                     .normalize().toAbsolutePath();
 
             File templateFile = noticeTemplateStorageClient.getTemplate(
@@ -139,18 +143,58 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             if (folderId != null) {
-                saveErrorEvent(folderId, noticeGenerationRequestItem);
+                saveErrorEvent(folderId, noticeGenerationRequestItem, e.getMessage());
             }
             throw e;
+        } finally {
+            if (tempDirectory != null) {
+                clearTempDirectory(tempDirectory);
+            }
         }
 
     }
 
-    private void saveErrorEvent(String folderId, NoticeGenerationRequestItem noticeGenerationRequestItem) {
+    @Override
+    public void processNoticeGenerationEH(String message) {
+
+        String folderId = null;
+        NoticeGenerationRequestItem noticeGenerationRequestItem = null;
+
+        try {
+
+            NoticeRequestEH noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
+            folderId = noticeRequestEH.getFolderId();
+            noticeGenerationRequestItem = noticeRequestEH.getNoticeGenerationRequestItem();
+
+        } catch (Exception e) {
+            try {
+                paymentGenerationRequestErrorRepository.save(
+                        PaymentNoticeGenerationRequestError.builder()
+                                .errorDescription("Unable to read EH message content")
+                                .folderId("UNKNOWN")
+                                .data(aes256Utils.encrypt(message))
+                                .createdAt(Instant.now())
+                                .numberOfAttempts(0)
+                                .build());
+            } catch (Exception cryptException) {
+                log.error(
+                        "Unable to save unparsable data to error"
+                );
+            }
+        }
+
+        if (noticeGenerationRequestItem != null && folderId != null) {
+            generateNotice(noticeGenerationRequestItem, folderId);
+        }
+
+    }
+
+    private void saveErrorEvent(
+            String folderId, NoticeGenerationRequestItem noticeGenerationRequestItem, String error) {
         try {
             paymentGenerationRequestErrorRepository.save(
                     PaymentNoticeGenerationRequestError.builder()
-                            .errorDescription("Encountered error sending notice on EH")
+                            .errorDescription(error)
                             .folderId(folderId)
                             .data(aes256Utils.encrypt(objectMapper
                                     .writeValueAsString(noticeGenerationRequestItem)))
@@ -159,7 +203,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                             .build()
             );
             paymentGenerationRequestRepository.findAndIncrementNumberOfElementsFailedById(folderId);
-        } catch (JsonProcessingException | Aes256Exception e) {
+        } catch (Exception e) {
             log.error(
                     "Unable to save notice data into error repository for notice with folder " + folderId +
                             " and noticeId " + noticeGenerationRequestItem.getData().getNotice().getCode()

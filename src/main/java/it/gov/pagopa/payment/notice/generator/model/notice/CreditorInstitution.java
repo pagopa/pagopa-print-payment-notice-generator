@@ -38,5 +38,7 @@ public class CreditorInstitution {
     @Schema(description = "CI cbill")
     private String cbill;
 
+    private String logo;
+
 
 }
