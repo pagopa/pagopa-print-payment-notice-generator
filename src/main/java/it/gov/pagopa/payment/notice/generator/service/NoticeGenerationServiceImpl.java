@@ -1,11 +1,9 @@
 package it.gov.pagopa.payment.notice.generator.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.payment.notice.generator.client.PdfEngineClient;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequestError;
-import it.gov.pagopa.payment.notice.generator.exception.Aes256Exception;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.mapper.TemplateDataMapper;
@@ -20,6 +18,7 @@ import it.gov.pagopa.payment.notice.generator.storage.InstitutionsStorageClient;
 import it.gov.pagopa.payment.notice.generator.storage.NoticeStorageClient;
 import it.gov.pagopa.payment.notice.generator.storage.NoticeTemplateStorageClient;
 import it.gov.pagopa.payment.notice.generator.util.Aes256Utils;
+import jakarta.validation.Validator;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
@@ -51,11 +50,11 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     private final NoticeStorageClient noticeStorageClient;
     private final NoticeTemplateStorageClient noticeTemplateStorageClient;
 
-    private final TemplateDataMapper templateDataMapper;
-
     private final Aes256Utils aes256Utils;
 
     private final ObjectMapper objectMapper;
+
+    private final Validator validator;
 
     public NoticeGenerationServiceImpl(
             PaymentGenerationRequestRepository paymentGenerationRequestRepository,
@@ -63,19 +62,19 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             InstitutionsStorageClient institutionsStorageClient,
             NoticeStorageClient noticeStorageClient,
             NoticeTemplateStorageClient noticeTemplateStorageClient,
-            TemplateDataMapper templateDataMapper,
             PdfEngineClient pdfEngineClient,
             Aes256Utils aes256Utils,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            Validator validator) {
         this.paymentGenerationRequestRepository = paymentGenerationRequestRepository;
         this.paymentGenerationRequestErrorRepository = paymentGenerationRequestErrorRepository;
         this.institutionsStorageClient = institutionsStorageClient;
         this.noticeStorageClient = noticeStorageClient;
         this.noticeTemplateStorageClient = noticeTemplateStorageClient;
-        this.templateDataMapper = templateDataMapper;
         this.pdfEngineClient = pdfEngineClient;
         this.aes256Utils = aes256Utils;
         this.objectMapper = objectMapper;
+        this.validator = validator;
     }
 
     @SneakyThrows
@@ -110,7 +109,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             //Build the request
             request.setTemplate(templateFile.toURI().toURL());
-            request.setData(objectMapper.writeValueAsString(noticeGenerationRequestItem.getData()));
+            request.setData(objectMapper.writeValueAsString(
+                    TemplateDataMapper.mapTemplate(noticeGenerationRequestItem.getData())));
             request.setApplySignature(false);
 
             PdfEngineResponse pdfEngineResponse = pdfEngineClient.generatePDF(request, tempDirectory);
@@ -119,7 +119,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 String errMsg = String.format("PDF-Engine response KO (%s): %s",
                         pdfEngineResponse.getStatusCode(), pdfEngineResponse.getErrorMessage());
                 log.error(errMsg);
-                throw new AppException(AppError.UNKNOWN);
+                throw new AppException(AppError.PDF_ENGINE_ERROR, errMsg);
             }
 
             if (folderId != null) {
@@ -129,12 +129,14 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     String dateFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
                     String blobName = String.format("%s-%s-%s", "pagopa-avviso", dateFormatted,
                             noticeGenerationRequestItem.getData().getNotice().getCode());
-                    noticeStorageClient.savePdfToBlobStorage(pdfStream, blobName);
+                    if (!noticeStorageClient.savePdfToBlobStorage(pdfStream, blobName)) {
+                        throw new RuntimeException("Encountered error during blob saving");
+                    }
                     paymentGenerationRequestRepository.findAndAddItemById(folderId, blobName);
 
                 } catch (Exception e) {
                     log.error(e.getMessage(), e);
-                    throw new AppException(AppError.UNKNOWN);
+                    throw new AppException(AppError.NOTICE_SAVE_ERROR, e);
                 }
             }
 
@@ -163,16 +165,22 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         try {
 
             NoticeRequestEH noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
+
+            if (!validator.validate(noticeRequestEH).isEmpty()) {
+                throw new AppException(AppError.MESSAGE_VALIDATION_ERROR);
+            }
+
             folderId = noticeRequestEH.getFolderId();
             noticeGenerationRequestItem = noticeRequestEH.getNoticeGenerationRequestItem();
 
         } catch (Exception e) {
+            log.error(e.getMessage(), e);
             try {
                 paymentGenerationRequestErrorRepository.save(
                         PaymentNoticeGenerationRequestError.builder()
                                 .errorDescription("Unable to read EH message content")
                                 .folderId("UNKNOWN")
-                                .data(aes256Utils.encrypt(message))
+                                .data(message != null ? aes256Utils.encrypt(message) : "EMPTY")
                                 .createdAt(Instant.now())
                                 .numberOfAttempts(0)
                                 .build());

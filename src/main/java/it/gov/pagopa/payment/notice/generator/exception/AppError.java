@@ -27,6 +27,13 @@ public enum AppError {
 
     INSTITUTION_PARSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Parsing Error for Institution Data",
             "Exception thrown while parsing institution data retrieve from storage"),
+
+    MESSAGE_VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Message Validation Error" , "EH Message content is not valid"),
+
+    PDF_ENGINE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "PDF Engine Error", "Encountered an error calling the PDF Engine"),
+
+    NOTICE_SAVE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Notice save error", "Exception while saving notice"),
+
     UNKNOWN(null, null, null);
 
   public final HttpStatus httpStatus;

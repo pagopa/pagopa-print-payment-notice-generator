@@ -102,14 +102,14 @@ public class NoticeTemplateStorageClient {
 
     private String createTemplatesDirectory(String templateId) {
         try {
-            File workingDirectory = createWorkingDirectory();
-            Path filePath = workingDirectory.toPath().resolve(
+            Path workingDirectory = createWorkingDirectory().toPath().normalize().toAbsolutePath();
+            Path filePath = workingDirectory.resolve(
                     "templates/"+templateId + ".zip").normalize().toAbsolutePath();
             if (!filePath.startsWith(workingDirectory + File.separator)) {
                 throw new IllegalArgumentException("Invalid filename");
             }
             return filePath.toFile().getAbsolutePath();
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new AppException(AppError.TEMPLATE_CLIENT_ERROR, e);
         }
     }

@@ -69,30 +69,5 @@ public class Aes256Utils {
         }
     }
 
-    public String decrypt(String strToDecrypt) throws Aes256Exception {
-        try{
-            byte[] encryptedData = Base64.getDecoder().decode(strToDecrypt);
-            byte[] iv = new byte[16];
-            System.arraycopy(encryptedData, 0, iv, 0, iv.length);
-            IvParameterSpec ivspec = new IvParameterSpec(iv);
-
-            SecretKeyFactory factory = SecretKeyFactory.getInstance(PBKDF_2_WITH_HMAC_SHA_256);
-            KeySpec spec = new PBEKeySpec(aesSecretKey.toCharArray(), aesSalt.getBytes(), ITERATION_COUNT, KEY_LENGTH);
-            SecretKey tmp = factory.generateSecret(spec);
-            SecretKeySpec secretKeySpec = new SecretKeySpec(tmp.getEncoded(), ALGORITHM);
-
-            //Padding vulnerability rule java:S5542 ignored because decryption is used inside application workflow
-            Cipher cipher = Cipher.getInstance(AES_CBC_PKCS_5_PADDING);
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivspec);
-
-            byte[] cipherText = new byte[encryptedData.length - 16];
-            System.arraycopy(encryptedData, 16, cipherText, 0, cipherText.length);
-
-            byte[] decryptedText = cipher.doFinal(cipherText);
-            return new String(decryptedText, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new Aes256Exception("Unexpected error when decrypting the given string", AES_UNEXPECTED_ERROR, e);
-        }
-    }
 }
 

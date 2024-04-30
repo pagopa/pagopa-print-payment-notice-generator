@@ -1,32 +1,18 @@
 package it.gov.pagopa.payment.notice.generator.storage;
 
 import com.azure.core.http.rest.Response;
-import com.azure.core.util.Context;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.BlockBlobItem;
-import com.azure.storage.blob.models.DownloadRetryOptions;
-import com.azure.storage.blob.options.BlobDownloadToFileOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
-import it.gov.pagopa.payment.notice.generator.exception.AppError;
-import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashSet;
 
 @Component
 public class NoticeStorageClient {

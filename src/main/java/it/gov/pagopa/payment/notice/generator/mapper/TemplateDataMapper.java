@@ -69,7 +69,7 @@ public class TemplateDataMapper {
                 .build();
     }
 
-    public static String generateQrCode(String code, String taxCode, String amount) {
+    private static String generateQrCode(String code, String taxCode, String amount) {
         return String.join("|",
                 "PAGOPA","002",
                 StringUtils.leftPad(code, 18, "0"),
@@ -79,7 +79,7 @@ public class TemplateDataMapper {
         );
     }
 
-    public static Installment mapInstallment(
+    private static Installment mapInstallment(
             String cbill, String taxCode, InstallmentData installmentData) {
         String amount = String.valueOf(installmentData.getAmount());
         return Installment.builder()

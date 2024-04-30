@@ -2,6 +2,8 @@ package it.gov.pagopa.payment.notice.generator.controller;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import it.gov.pagopa.payment.notice.generator.exception.AppError;
+import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.service.NoticeGenerationService;
 import jakarta.validation.Valid;
@@ -47,8 +49,8 @@ public class NoticeGenerationController {
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .headers(headers)
                     .body(new ByteArrayResource(inputStream.readAllBytes()));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            throw new AppException(AppError.INTERNAL_SERVER_ERROR, e);
         } finally {
             clearTempDirectory(file.toPath().getParent());
         }

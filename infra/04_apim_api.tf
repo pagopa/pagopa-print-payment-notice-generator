@@ -1,9 +1,9 @@
 locals {
-  repo_name = "TODO" # TODO add the name of the repository
+  repo_name = "pagopa-print-payment-notice-generator"
 
-  display_name = "TODO" # TODO
-  description  = "TODO" # TODO
-  path  = "TODO" # TODO add your base path
+  display_name = "Payment Notices Print Generator APIs"
+  description  = "Payment Notices Print Generator APIs"
+  path  = "payment/notice/generator"
 
   host         = "api.${var.apim_dns_zone_prefix}.${var.external_domain}"
   hostname     = var.hostname
