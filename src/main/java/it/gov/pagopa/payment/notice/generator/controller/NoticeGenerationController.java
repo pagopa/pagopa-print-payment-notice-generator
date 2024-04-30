@@ -20,10 +20,12 @@ import org.springframework.web.bind.annotation.*;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.clearTempDirectory;
 
+/**
+ * Controller containing APIs to generate notice
+ */
 @RestController
 @RequestMapping(value = "/notices", produces = MediaType.APPLICATION_JSON_VALUE)
 @Validated
@@ -37,6 +39,13 @@ public class NoticeGenerationController {
         this.noticeGenerationService = noticeGenerationService;
     }
 
+    /**
+     * POST method to generate a single notice, if a folderId is provided the content will be saved inside the provided
+     * folder
+     * @param folderId optional parameter to use if the content generates has to be saved
+     * @param noticeGenerationRequestItem data containing notice generation request
+     * @return generated pdf
+     */
     @PostMapping("/generate")
     public ResponseEntity<Resource> generateNotice(
             @Valid @NotNull @RequestParam("folderId") String folderId,

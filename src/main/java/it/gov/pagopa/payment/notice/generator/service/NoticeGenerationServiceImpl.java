@@ -37,6 +37,9 @@ import java.util.Optional;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.clearTempDirectory;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
+/**
+ * Services regarding the notice generation flow
+ */
 @Service
 @Slf4j
 public class NoticeGenerationServiceImpl implements NoticeGenerationService {
@@ -77,6 +80,13 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         this.validator = validator;
     }
 
+    /**
+     * Generate a notice, if required content is provided and valid, and saves the content to a folderId if provided
+     * and valid
+     * @param noticeGenerationRequestItem request data to use for the notice generation
+     * @param folderId optional parameter to generate folderId
+     * @return generated notice
+     */
     @SneakyThrows
     @Override
     public File generateNotice(NoticeGenerationRequestItem noticeGenerationRequestItem,
@@ -156,6 +166,10 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
     }
 
+    /**
+     * Generate a notice provided as a EH message
+     * @param message content to use for generation process
+     */
     @Override
     public void processNoticeGenerationEH(String message) {
 

@@ -7,14 +7,28 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collections;
 
+/**
+ * Class containing methods to map paymentNotice data to use in notice generation
+ */
 public class TemplateDataMapper {
 
+    /**
+     * Map notice generation dat
+     * @param noticeRequestData request data
+     * @return mapped notice data
+     */
     public static PaymentNotice mapTemplate(NoticeRequestData noticeRequestData) {
 
         String noticeCode = noticeRequestData.getNotice().getCode();
         String cbill = noticeRequestData.getCreditorInstitution().getCbill();
         String ciTaxCode = noticeRequestData.getCreditorInstitution().getTaxCode();
         String noticeAmount = String.valueOf(noticeRequestData.getNotice().getPaymentAmount());
+        String debtorTaxCode = noticeRequestData.getDebtor().getTaxCode();
+        String fullName = noticeRequestData.getDebtor().getFullName();
+        String subject = noticeRequestData.getNotice().getSubject();
+        String posteAuthCode = noticeRequestData.getNotice().getPosteAuth();
+        String posteAccountNumber = noticeRequestData.getCreditorInstitution().getPosteAccountNumber();
+
 
         return PaymentNotice.builder()
                 .payee(Payee.builder()
@@ -42,8 +56,8 @@ public class TemplateDataMapper {
                         .city(noticeRequestData.getDebtor().getCity())
                         .postalCode(noticeRequestData.getDebtor().getPostalCode())
                         .address(noticeRequestData.getDebtor().getAddress())
-                        .fullName(noticeRequestData.getDebtor().getFullName())
-                        .taxCode(noticeRequestData.getDebtor().getTaxCode())
+                        .fullName(fullName)
+                        .taxCode(debtorTaxCode)
                         .build()
                 )
                 .notice(Notice.builder()
@@ -57,16 +71,58 @@ public class TemplateDataMapper {
                         .subject(noticeRequestData.getNotice().getSubject())
                         .amount(noticeAmount)
                         .expiryDate(noticeRequestData.getNotice().getDueDate())
+                        .posteDataMatrix(posteAuthCode != null ?
+                                generatePosteDataMatrix(
+                                ciTaxCode,
+                                debtorTaxCode,
+                                fullName,
+                                subject,
+                                posteAuthCode,
+                                posteAccountNumber,
+                                noticeAmount,
+                                noticeRequestData.getNotice().getPosteDocumentType()
+                        ) : null)
                         .instalments(noticeRequestData.getNotice().getInstallments() != null ?
                                 noticeRequestData.getNotice().getInstallments().stream().map(item ->
                                         mapInstallment(
-                                                noticeCode,
+                                                ciTaxCode,
                                                 cbill,
+                                                debtorTaxCode,
+                                                fullName,
+                                                subject,
+                                                posteAccountNumber,
                                                 item
                                         )).toList() :
                                 Collections.emptyList())
                         .build())
                 .build();
+    }
+
+    private static String generatePosteDataMatrix(
+            String ciTaxCode, String debtorTaxCode, String fullName, String subject, String authCode,
+            String posteAccountNumber, String amount, String posteTypeCode
+    ) {
+        return String.join("",
+                "codfase=NBPA;",
+                generateCodeline(authCode, posteAccountNumber, amount, posteTypeCode),
+                "1P1",
+                StringUtils.rightPad(ciTaxCode, 11, " "),
+                StringUtils.rightPad(debtorTaxCode, 16, " "),
+                StringUtils.rightPad(fullName, 40, " "),
+                StringUtils.rightPad(subject, 110, " "),
+                StringUtils.rightPad("", 12, " "),
+                "A");
+    }
+
+    private static String generateCodeline(String posteAuthCode, String posteAccountNumber,
+                                           String amount, String posteTypeCode) {
+        return String.join("","18",
+                StringUtils.leftPad(posteAuthCode, 18, "0"),
+                "12",
+                StringUtils.leftPad(posteAccountNumber, 12, "0"),
+                "10",
+                StringUtils.leftPad(amount, 10, "0"), "3",
+                posteTypeCode);
     }
 
     private static String generateQrCode(String code, String taxCode, String amount) {
@@ -80,14 +136,31 @@ public class TemplateDataMapper {
     }
 
     private static Installment mapInstallment(
-            String cbill, String taxCode, InstallmentData installmentData) {
+            String cbill, String ciTaxCode, String debtorTaxCode,
+            String fullname, String subject, String accountNumber,
+            InstallmentData installmentData) {
         String amount = String.valueOf(installmentData.getAmount());
         return Installment.builder()
                 .refNumber(installmentData.getCode())
                 .cbillCode(cbill)
-                .qrCode(generateQrCode(installmentData.getCode(), taxCode, amount))
+                .qrCode(generateQrCode(installmentData.getCode(), ciTaxCode, amount))
                 .amount(amount)
                 .expiryDate(installmentData.getDueDate())
+                .posteDocumentType(installmentData.getPosteDocumentType())
+                .posteAuth(installmentData.getPosteAuth())
+                .posteDataMatrix(installmentData.getPosteAuth() != null ?
+                    generatePosteDataMatrix(
+                            ciTaxCode,
+                            debtorTaxCode,
+                            fullname,
+                            subject,
+                            installmentData.getPosteAuth(),
+                            accountNumber,
+                            String.valueOf(installmentData.getAmount()),
+                            installmentData.getPosteDocumentType()
+                    ) :
+                        null
+                )
                 .build();
     }
 

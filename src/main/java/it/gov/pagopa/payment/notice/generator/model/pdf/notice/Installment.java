@@ -16,5 +16,8 @@ public class Installment {
     private String expiryDate;
     private String cbillCode;
     private String qrCode;
+    private String posteAuth;
+    private String posteDataMatrix;
+    private String posteDocumentType;
 
 }

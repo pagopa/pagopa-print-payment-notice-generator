@@ -40,5 +40,9 @@ public class CreditorInstitution {
 
     private String logo;
 
+    @Schema(description = "Poste account number")
+    private String posteAccountNumber;
+
+
 
 }
