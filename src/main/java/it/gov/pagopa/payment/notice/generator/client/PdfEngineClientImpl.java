@@ -45,8 +45,8 @@ public class PdfEngineClientImpl implements PdfEngineClient {
 
     @Autowired
     private PdfEngineClientImpl(ObjectMapper objectMapper,
-                                @Value("pdf.engine.endpoint") String pdfEngineEndpoint,
-                                @Value("pdf.engine.ocpaim.subkey") String ocpAimSubKey) {
+                                @Value("${pdf.engine.endpoint}") String pdfEngineEndpoint,
+                                @Value("${pdf.engine.ocpaim.subkey}") String ocpAimSubKey) {
         this.objectMapper = objectMapper;
         this.httpClientBuilder = HttpClientBuilder.create();
         this.ocpAimSubKey = ocpAimSubKey;

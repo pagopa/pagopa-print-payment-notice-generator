@@ -48,7 +48,7 @@ public class NoticeGenerationController {
      */
     @PostMapping("/generate")
     public ResponseEntity<Resource> generateNotice(
-            @Valid @NotNull @RequestParam("folderId") String folderId,
+            @RequestParam(value = "folderId", required = false) String folderId,
             @Parameter(description = "templateId to use for retrieval")
             @Valid @NotNull @RequestBody NoticeGenerationRequestItem noticeGenerationRequestItem) {
         File file = noticeGenerationService.generateNotice(noticeGenerationRequestItem, folderId);

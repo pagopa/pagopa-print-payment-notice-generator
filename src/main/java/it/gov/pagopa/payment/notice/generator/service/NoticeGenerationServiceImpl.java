@@ -158,10 +158,6 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 saveErrorEvent(folderId, noticeGenerationRequestItem, e.getMessage());
             }
             throw e;
-        } finally {
-            if (tempDirectory != null) {
-                clearTempDirectory(tempDirectory);
-            }
         }
 
     }
