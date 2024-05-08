@@ -48,7 +48,8 @@ public class NoticeStorageClient {
     public boolean savePdfToBlobStorage(InputStream pdf, String folderId, String fileName) {
 
         //Get a reference to a blob
-        BlobClient blobClient = blobContainerClient.getBlobClient(String.join("/", folderId, fileName));
+        BlobClient blobClient = blobContainerClient.getBlobClient(String.join("/", folderId,
+                fileName.concat(".pdf")));
 
         //Upload the blob
         Response<BlockBlobItem> blockBlobItemResponse = blobClient.uploadWithResponse(
