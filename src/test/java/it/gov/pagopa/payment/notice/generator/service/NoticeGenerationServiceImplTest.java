@@ -111,7 +111,7 @@ class NoticeGenerationServiceImplTest {
         ).when(institutionsStorageClient).getInstitutionData(any());
         doReturn(getPdfEngineResponse(HttpStatus.SC_OK, noticeFile.getPath()))
                 .when(pdfEngineClient).generatePDF(any(), any());
-        doReturn(true).when(noticeStorageClient).savePdfToBlobStorage(any(), any());
+        doReturn(true).when(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
         doReturn(1L).when(paymentGenerationRequestRepository).findAndAddItemById(any(),any());
 
         NoticeRequestEH noticeRequestEH = NoticeRequestEH
@@ -151,7 +151,7 @@ class NoticeGenerationServiceImplTest {
         noticeGenerationService.processNoticeGenerationEH(objectMapper.writeValueAsString(noticeRequestEH));
         verify(paymentGenerationRequestRepository).findById(any());
         verify(paymentGenerationRequestRepository).findAndAddItemById(any(), any());
-        verify(noticeStorageClient).savePdfToBlobStorage(any(),any());
+        verify(noticeStorageClient).savePdfToBlobStorage(any(),any(),any());
         verify(institutionsStorageClient).getInstitutionData(any());
         verify(noticeTemplateStorageClient).getTemplate(any());
         verify(pdfEngineClient).generatePDF(any(),any());

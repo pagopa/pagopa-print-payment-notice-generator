@@ -61,22 +61,6 @@ class NoticeGenerationControllerTest {
     }
 
     @Test
-    void generateNoticeShouldReturnBadRequestOnMissingFolder() throws Exception {
-        File tempDirectory = Files.createTempDirectory("test").toFile();
-        File file = Files.createTempFile(tempDirectory.toPath(), "test", ".zip").toFile();
-        when(noticeGenerationService.generateNotice(any(),any()))
-                .thenReturn(file);
-        String url = "/notices/generate";
-        mvc.perform(post(url)
-                        .content(objectMapper.writeValueAsString(
-                                getNoticeGenerationRequestItem()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                )
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(noticeGenerationService);
-    }
-
-    @Test
     void generateNoticeShouldReturnKOonErrorFile() throws Exception {
         when(noticeGenerationService.generateNotice(any(),any()))
                 .thenReturn(null);

@@ -45,10 +45,10 @@ public class NoticeStorageClient {
      * @param fileName Filename to save the PDF with
      * @return blob storage response with PDF metadata or error message and status
      */
-    public boolean savePdfToBlobStorage(InputStream pdf, String fileName) {
+    public boolean savePdfToBlobStorage(InputStream pdf, String folderId, String fileName) {
 
         //Get a reference to a blob
-        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
+        BlobClient blobClient = blobContainerClient.getBlobClient(String.join("/", folderId, fileName));
 
         //Upload the blob
         Response<BlockBlobItem> blockBlobItemResponse = blobClient.uploadWithResponse(

@@ -39,7 +39,7 @@ class NoticeStorageClientTest {
         NoticeStorageClient noticeStorageClient = new NoticeStorageClient(true, mockContainer);
 
         boolean result = noticeStorageClient.savePdfToBlobStorage(
-                InputStream.nullInputStream(), "filename");
+                InputStream.nullInputStream(), "folderId","filename");
 
         assertTrue(result);
 
@@ -62,7 +62,7 @@ class NoticeStorageClientTest {
 
         NoticeStorageClient receiptBlobClient = new NoticeStorageClient(true, mockContainer);
 
-        boolean response = receiptBlobClient.savePdfToBlobStorage(InputStream.nullInputStream(), "filename");
+        boolean response = receiptBlobClient.savePdfToBlobStorage(InputStream.nullInputStream(), "folderId","filename");
 
         Assertions.assertFalse(response);
 

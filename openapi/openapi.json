@@ -25,7 +25,7 @@
         "parameters" : [ {
           "in" : "query",
           "name" : "folderId",
-          "required" : true,
+          "required" : false,
           "schema" : {
             "type" : "string"
           }
@@ -94,6 +94,10 @@
             "type" : "string",
             "description" : "CI physical channel data"
           },
+          "posteAccountNumber" : {
+            "type" : "string",
+            "description" : "Poste account number"
+          },
           "taxCode" : {
             "type" : "string",
             "description" : "CI tax code"
@@ -156,6 +160,14 @@
           "dueDate" : {
             "type" : "string",
             "description" : "Installment dueDate"
+          },
+          "posteAuth" : {
+            "type" : "string",
+            "description" : "Installment poste auth code"
+          },
+          "posteDocumentType" : {
+            "type" : "string",
+            "description" : "Poste Document Type"
           }
         },
         "description" : "Notice installments (if present)"
@@ -183,6 +195,14 @@
             "type" : "integer",
             "description" : "Notice total amount to pay",
             "format" : "int64"
+          },
+          "posteAuth" : {
+            "type" : "string",
+            "description" : "Poste auth code"
+          },
+          "posteDocumentType" : {
+            "type" : "string",
+            "description" : "Poste Document Type"
           },
           "subject" : {
             "type" : "string",

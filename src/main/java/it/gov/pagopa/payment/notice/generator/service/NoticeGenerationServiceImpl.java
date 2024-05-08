@@ -100,7 +100,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             }
         }
 
-        Path tempDirectory = null;
+        Path tempDirectory;
 
         try {
 
@@ -139,7 +139,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     String dateFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
                     String blobName = String.format("%s-%s-%s", "pagopa-avviso", dateFormatted,
                             noticeGenerationRequestItem.getData().getNotice().getCode());
-                    if (!noticeStorageClient.savePdfToBlobStorage(pdfStream, blobName)) {
+                    if (!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, blobName)) {
                         throw new RuntimeException("Encountered error during blob saving");
                     }
                     paymentGenerationRequestRepository.findAndAddItemById(folderId, blobName);
