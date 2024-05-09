@@ -14,6 +14,6 @@ public class NoticeRequestEH {
 
     @NotNull
     private String folderId;
-    private NoticeGenerationRequestItem noticeGenerationRequestItem;
+    private NoticeGenerationRequestItem noticeData;
 
 }

@@ -5,7 +5,10 @@ import it.gov.pagopa.payment.notice.generator.model.notice.NoticeRequestData;
 import it.gov.pagopa.payment.notice.generator.model.pdf.notice.*;
 import org.apache.commons.lang3.StringUtils;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.util.Collections;
+import java.util.Locale;
 
 /**
  * Class containing methods to map paymentNotice data to use in notice generation
@@ -69,7 +72,7 @@ public class TemplateDataMapper {
                                 noticeAmount)
                         )
                         .subject(noticeRequestData.getNotice().getSubject())
-                        .amount(noticeAmount)
+                        .amount(currencyFormat(noticeAmount))
                         .expiryDate(noticeRequestData.getNotice().getDueDate())
                         .posteDataMatrix(posteAuthCode != null ?
                                 generatePosteDataMatrix(
@@ -144,7 +147,7 @@ public class TemplateDataMapper {
                 .refNumber(installmentData.getCode())
                 .cbillCode(cbill)
                 .qrCode(generateQrCode(installmentData.getCode(), ciTaxCode, amount))
-                .amount(amount)
+                .amount(currencyFormat(amount))
                 .expiryDate(installmentData.getDueDate())
                 .posteDocumentType(installmentData.getPosteDocumentType())
                 .posteAuth(installmentData.getPosteAuth())
@@ -162,6 +165,14 @@ public class TemplateDataMapper {
                         null
                 )
                 .build();
+    }
+
+    private static String currencyFormat(String value) {
+        BigDecimal valueToFormat = new BigDecimal(value);
+        NumberFormat numberFormat = NumberFormat.getInstance(Locale.ITALY);
+        numberFormat.setMaximumFractionDigits(2);
+        numberFormat.setMinimumFractionDigits(2);
+        return numberFormat.format(valueToFormat);
     }
 
 }

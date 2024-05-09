@@ -32,9 +32,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 
-import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.clearTempDirectory;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
 /**
@@ -182,7 +180,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             }
 
             folderId = noticeRequestEH.getFolderId();
-            noticeGenerationRequestItem = noticeRequestEH.getNoticeGenerationRequestItem();
+            noticeGenerationRequestItem = noticeRequestEH.getNoticeData();
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);

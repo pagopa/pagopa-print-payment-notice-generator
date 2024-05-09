@@ -117,7 +117,7 @@ class NoticeGenerationServiceImplTest {
         NoticeRequestEH noticeRequestEH = NoticeRequestEH
                 .builder()
                 .folderId("test")
-                .noticeGenerationRequestItem(NoticeGenerationRequestItem.builder()
+                .noticeData(NoticeGenerationRequestItem.builder()
                         .templateId("template")
                         .data(NoticeRequestData.builder()
                                 .notice(Notice.builder()
@@ -181,7 +181,7 @@ class NoticeGenerationServiceImplTest {
         NoticeRequestEH noticeRequestEH = NoticeRequestEH
                 .builder()
                 .folderId("test")
-                .noticeGenerationRequestItem(NoticeGenerationRequestItem.builder()
+                .noticeData(NoticeGenerationRequestItem.builder()
                         .templateId("template")
                         .data(NoticeRequestData.builder()
                                 .notice(Notice.builder()
@@ -234,7 +234,7 @@ class NoticeGenerationServiceImplTest {
 
         NoticeRequestEH noticeRequestEH = NoticeRequestEH
                 .builder()
-                .noticeGenerationRequestItem(NoticeGenerationRequestItem.builder()
+                .noticeData(NoticeGenerationRequestItem.builder()
                         .templateId("template")
                         .data(NoticeRequestData.builder()
                                 .notice(Notice.builder()
