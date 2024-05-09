@@ -29,7 +29,7 @@ microservice-chart:
       - 8080
   ingress:
     create: true
-    host: "itnprod.printit.internal.platform.pagopa.it"
+    host: "printit.itn.internal.platform.pagopa.it"
     path: /pagopa-print-payment-notice-generator/(.*)
     servicePort: 8080
   serviceAccount:
