@@ -93,11 +93,9 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                                String folderId) {
 
         if (folderId != null) {
-            Optional<PaymentNoticeGenerationRequest> paymentNoticeGenerationRequestOptional =
-                    paymentGenerationRequestRepository.findById(folderId);
-            if (paymentNoticeGenerationRequestOptional.isEmpty()) {
-                throw new AppException(AppError.FOLDER_NOT_AVAILABLE);
-            }
+            PaymentNoticeGenerationRequest paymentNoticeGenerationRequestOptional =
+                    paymentGenerationRequestRepository.findById(folderId)
+                    .orElseThrow(()->throw new AppException(AppError.FOLDER_NOT_AVAILABLE));
         }
 
         Path tempDirectory;
