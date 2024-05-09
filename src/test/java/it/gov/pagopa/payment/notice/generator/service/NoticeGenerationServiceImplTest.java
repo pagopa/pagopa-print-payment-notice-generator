@@ -172,6 +172,7 @@ class NoticeGenerationServiceImplTest {
                     .logo("logo")
                     .cbill("Cbill")
                     .organization("ORG")
+                    .posteAccountNumber("131213")
                 .build()
         ).when(institutionsStorageClient).getInstitutionData(any());
         doReturn(getPdfEngineResponse(HttpStatus.SC_INTERNAL_SERVER_ERROR, noticeFile.getPath()))
@@ -188,11 +189,15 @@ class NoticeGenerationServiceImplTest {
                                         .dueDate("24/10/2024")
                                         .subject("subject")
                                         .paymentAmount(100L)
+                                        .posteDocumentType("0121")
+                                        .posteAuth("0232323")
                                         .installments(Collections.singletonList(
                                                 InstallmentData.builder()
                                                         .amount(100L)
                                                         .code("codeRate")
                                                         .dueDate("24/10/2024")
+                                                        .posteAuth("02323")
+                                                        .posteAuth("322323")
                                                         .build()
                                         ))
                                         .build())

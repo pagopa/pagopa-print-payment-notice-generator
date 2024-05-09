@@ -120,7 +120,7 @@ public class NoticeTemplateStorageClient {
     }
 
     @Scheduled(cron = "${spring.cloud.azure.storage.blob.templates.timeout}")
-    private void refreshTemplates() {
+    protected void refreshTemplates() {
         File templateFiles = new File("temp/templates");
         if (templateFiles.exists()) {
             if (!templateFiles.delete()) {

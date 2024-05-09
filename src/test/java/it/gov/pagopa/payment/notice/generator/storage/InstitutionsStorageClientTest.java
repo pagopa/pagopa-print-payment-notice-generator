@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -60,6 +61,17 @@ class InstitutionsStorageClientTest {
                 .downloadContent();
         assertThrows(AppException.class, () -> institutionsStorageClient.getInstitutionData("testFile"));
     }
+
+    @Test
+    void shouldReturnExceptionOnIoError() {
+        doAnswer(item -> {
+            throw new IOException("test");
+        }).when(blobClientMock)
+                .downloadContent();
+        assertThrows(AppException.class, () ->
+                institutionsStorageClient.getInstitutionData("testFile"));
+    }
+
 
     @Test
     void shouldReturnExceptionOnMissingClient() {

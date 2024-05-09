@@ -49,6 +49,7 @@ class NoticeTemplateStorageClientTest {
                 );
         File result = noticeTemplateStorageClient.getTemplate("testFile");
         assertNotNull(result);
+        noticeTemplateStorageClient.refreshTemplates();
     }
 
     @Test
