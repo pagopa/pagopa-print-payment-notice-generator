@@ -1,12 +1,12 @@
 locals {
   github = {
     org        = "pagopa"
-    repository = "TODO" #TODO
+    repository = "pagopa-print-payment-notice-generator"
   }
 
   prefix         = "pagopa"
-  domain         = "TODO" #TODO
-  location_short = "weu"
+  domain         = "printit"
+  location_short = "itn"
   product        = "${var.prefix}-${var.env_short}"
 
   app_name = "github-${local.github.org}-${local.github.repository}-${var.prefix}-${local.domain}-${var.env}-aks"
@@ -35,7 +35,7 @@ variable "prefix" {
   default = "pagopa"
   validation {
     condition = (
-      length(var.prefix) <= 6
+    length(var.prefix) <= 6
     )
     error_message = "Max length is 6 chars."
   }
