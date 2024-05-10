@@ -36,7 +36,7 @@ public class TemplateDataMapper {
         return PaymentNotice.builder()
                 .payee(Payee.builder()
                         .taxCode(ciTaxCode)
-                        .name(noticeRequestData.getDebtor().getFullName())
+                        .name(noticeRequestData.getCreditorInstitution().getFullName())
                         .channel(Channel.builder().online(
                                 Online.builder()
                                         .website(noticeRequestData.getCreditorInstitution().getWebChannel())
@@ -85,7 +85,7 @@ public class TemplateDataMapper {
                                 noticeAmount,
                                 noticeRequestData.getNotice().getPosteDocumentType()
                         ) : null)
-                        .instalments(noticeRequestData.getNotice().getInstallments() != null ?
+                        .instalments(Installments.builder().items(noticeRequestData.getNotice().getInstallments() != null ?
                                 noticeRequestData.getNotice().getInstallments().stream().map(item ->
                                         mapInstallment(
                                                 ciTaxCode,
@@ -96,7 +96,7 @@ public class TemplateDataMapper {
                                                 posteAccountNumber,
                                                 item
                                         )).toList() :
-                                Collections.emptyList())
+                                Collections.emptyList()).build())
                         .build())
                 .build();
     }

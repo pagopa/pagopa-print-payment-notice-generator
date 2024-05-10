@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -23,6 +21,6 @@ public class Notice {
     private String posteAuth;
     private String posteDocumentType;
     private String posteDataMatrix;
-    private List<Installment> instalments;
+    private Installments instalments;
 
 }

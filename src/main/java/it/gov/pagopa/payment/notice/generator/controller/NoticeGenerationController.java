@@ -54,7 +54,7 @@ public class NoticeGenerationController {
         File file = noticeGenerationService.generateNotice(noticeGenerationRequestItem, folderId);
         try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file))) {
             HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + ".pdf\"");
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"");
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .headers(headers)
                     .body(new ByteArrayResource(inputStream.readAllBytes()));
