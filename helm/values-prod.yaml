@@ -1,9 +1,9 @@
 microservice-chart:
-  namespace: "your-namespace" # TODO: set your AKS namespace
+  namespace: "printit"
   nameOverride: ""
   fullnameOverride: ""
   image:
-    repository: ghcr.io/pagopa/yourname # TODO
+    repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
     tag: "0.0.0"
     pullPolicy: Always
   livenessProbe:
@@ -29,8 +29,8 @@ microservice-chart:
       - 8080
   ingress:
     create: true
-    host: "your.host" # TODO: set the host
-    path: /your-path-here/(.*) # TODO: set your path
+    host: "printit.itn.internal.platform.pagopa.it"
+    path: /pagopa-print-payment-notice-generator/(.*)
     servicePort: 8080
   serviceAccount:
     create: false
@@ -51,7 +51,7 @@ microservice-chart:
       cpu: "0.25"
   autoscaling:
     enable: true
-    minReplica: 3
+    minReplica: 1
     maxReplica: 10
     pollingInterval: 10 # seconds
     cooldownPeriod: 50 # seconds
@@ -62,26 +62,33 @@ microservice-chart:
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
   envConfig:
-    # TODO: set your name
-    WEBSITE_SITE_NAME: 'yourProjectName' # required to show cloud role name in application insights
+    WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-prod'
-    APP_LOGGING_LEVEL: 'INFO'
+    APP_LOGGING_LEVEL: 'DEBUG'
     DEFAULT_LOGGING_LEVEL: 'INFO'
     CORS_CONFIGURATION: '{"origins": ["*"], "methods": ["*"]}'
 
-    OTEL_SERVICE_NAME: # TODO
+    OTEL_SERVICE_NAME: 'print-payment-notice-generator-otl'
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=prod"
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.elastic-system.svc:4317"
     OTEL_TRACES_EXPORTER: otlp
     OTEL_METRICS_EXPORTER: otlp
     OTEL_LOGS_EXPORTER: none
     OTEL_TRACES_SAMPLER: "always_on"
+    KAFKA_BROKER: "pagopa-p-itn-core-evh-meucci.servicebus.windows.net:9093"
+    KAFKA_NOTICE_GENERATION_TOPIC: pagopa-printit-evh
   envSecret:
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-p-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: elastic-apm-secret-token
+    MONGODB_CONNECTION_URI: 'notices_mongo_connection_string'
+    TEMPLATE_STORAGE_CONN_STRING: 'templates_storage_account_connection_string'
+    INSTITUTION_STORAGE_CONN_STRING: 'institutions_storage_account_connection_string'
+    NOTICE_STORAGE_CONN_STRING: 'notices_storage_account_connection_string'
+    KAFKA_SASL_JAAS_CONFIG: 'ehub_notice_connection_string'
+    PDF_ENGINE_SUBKEY: 'pdf_engine_node_subkey'
   keyvault:
-    name: "pagopa-p-name-kv" #TODO
+    name: "pagopa-p-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
   nodeSelector: { }
   tolerations: [ ]
@@ -108,7 +115,7 @@ microservice-chart:
     deployment:
       create: true
       image:
-        repository: ghcr.io/pagopa/yourname # TODO
+        repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
         tag: "0.0.0"
         pullPolicy: Always
       envConfig: { }
