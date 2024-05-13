@@ -40,3 +40,4 @@ hs_err_pid*
 **/.terraform/
 
 /temp
+/src/main/resources/application-local.properties
