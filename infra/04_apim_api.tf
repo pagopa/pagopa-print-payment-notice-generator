@@ -3,10 +3,10 @@ locals {
 
   display_name = "Payment Notices Print Generator APIs"
   description  = "Payment Notices Print Generator APIs"
-  path  = "print-payment-notice-generator"
+  path         = "print-payment-notice-generator"
 
-  host         = "api.${var.apim_dns_zone_prefix}.${var.external_domain}"
-  hostname     = var.hostname
+  host     = "api.${var.apim_dns_zone_prefix}.${var.external_domain}"
+  hostname = var.hostname
 }
 
 resource "azurerm_api_management_group" "api_group" {
