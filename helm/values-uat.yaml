@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-generator"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
-    tag: "0.0.4"
+    tag: "0.0.4-1-infra"
     pullPolicy: Always
   livenessProbe:
     httpGet:
@@ -76,6 +76,8 @@ microservice-chart:
     OTEL_TRACES_SAMPLER: "always_on"
     KAFKA_BROKER: "pagopa-u-itn-core-evh-meucci.servicebus.windows.net:9093"
     KAFKA_NOTICE_GENERATION_TOPIC: pagopa-printit-evh
+    PDF_ENGINE_ENDPOINT: 'https://api.uat.platform.pagopa.it/printit/pdf-engine/v1/generate-pdf'
+    REST_CLIENT_LOGGER_LEVEL: 'NONE'
   envSecret:
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-u-connection-string'
