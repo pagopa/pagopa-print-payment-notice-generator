@@ -12,6 +12,10 @@ terraform {
       source  = "Azure/azapi"
       version = "= 1.3.0"
     }
+    github = {
+      source  = "integrations/github"
+      version = "5.18.3"
+    }
   }
 
   backend "azurerm" {}
@@ -19,6 +23,10 @@ terraform {
 
 provider "azurerm" {
   features {}
+}
+
+provider "github" {
+  owner = "pagopa"
 }
 
 provider "azapi" {}
