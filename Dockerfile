@@ -21,6 +21,8 @@ RUN true
 COPY --chown=spring:spring  --from=builder spring-boot-loader/ ./
 COPY --chown=spring:spring  --from=builder application/ ./
 
+RUN mkdir -p "/temp"
+
 EXPOSE 8080
 
 ENTRYPOINT ["java","--enable-preview","org.springframework.boot.loader.launch.JarLauncher"]
