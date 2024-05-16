@@ -41,7 +41,16 @@ microservice-chart:
     seccompProfile:
       type: RuntimeDefault
   securityContext:
-    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: true
+    capabilities:
+      drop:
+        - all
+  tmpVolumeMount:
+    create: true
+    mounts:
+      - name: temp
+        mountPath: /temp
   resources:
     requests:
       memory: "512Mi"
