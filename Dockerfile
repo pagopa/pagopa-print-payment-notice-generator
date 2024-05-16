@@ -14,6 +14,7 @@ RUN java -Djarmode=layertools -jar application.jar extract
 
 FROM ghcr.io/pagopa/docker-base-springboot-openjdk17:v1.1.3@sha256:a4e970ef05ecf2081424a64707e7c20856bbc40ddb3e99b32a24cd74591817c4
 
+
 COPY --chown=spring:spring  --from=builder dependencies/ ./
 COPY --chown=spring:spring  --from=builder snapshot-dependencies/ ./
 # https://github.com/moby/moby/issues/37965#issuecomment-426853382
@@ -21,7 +22,9 @@ RUN true
 COPY --chown=spring:spring  --from=builder spring-boot-loader/ ./
 COPY --chown=spring:spring  --from=builder application/ ./
 
+USER root
 RUN mkdir -p "/temp"
+RUN chmod 777 /temp
 
 EXPOSE 8080
 
