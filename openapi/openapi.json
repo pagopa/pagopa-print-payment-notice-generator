@@ -4,7 +4,7 @@
     "description": "PagoPA Print Payment Notices Generator",
     "termsOfService": "https://www.pagopa.gov.it/",
     "title": "pagopa-print-payment-notice-generator",
-    "version": "0.0.5-2-infra"
+    "version": "0.0.5-3-infra"
   },
   "servers": [
     {
