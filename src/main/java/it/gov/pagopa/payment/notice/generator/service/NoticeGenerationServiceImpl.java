@@ -2,7 +2,9 @@ package it.gov.pagopa.payment.notice.generator.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.payment.notice.generator.client.PdfEngineClient;
+import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequestError;
+import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompleteProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.mapper.TemplateDataMapper;
@@ -31,6 +33,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
@@ -57,6 +60,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
     private final Validator validator;
 
+    private final NoticeRequestCompleteProducer noticeRequestCompleteProducer;
+
     public NoticeGenerationServiceImpl(
             PaymentGenerationRequestRepository paymentGenerationRequestRepository,
             PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository,
@@ -66,7 +71,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             PdfEngineClient pdfEngineClient,
             Aes256Utils aes256Utils,
             ObjectMapper objectMapper,
-            Validator validator) {
+            Validator validator, NoticeRequestCompleteProducer noticeRequestCompleteProducer) {
         this.paymentGenerationRequestRepository = paymentGenerationRequestRepository;
         this.paymentGenerationRequestErrorRepository = paymentGenerationRequestErrorRepository;
         this.institutionsStorageClient = institutionsStorageClient;
@@ -76,6 +81,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         this.aes256Utils = aes256Utils;
         this.objectMapper = objectMapper;
         this.validator = validator;
+        this.noticeRequestCompleteProducer = noticeRequestCompleteProducer;
     }
 
     /**
@@ -154,6 +160,15 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 throw new RuntimeException("Encountered error during blob saving");
             }
             paymentGenerationRequestRepository.findAndAddItemById(folderId, blobName);
+            PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
+                    paymentGenerationRequestRepository.findById(folderId).orElseThrow();
+            if (Objects.equals(paymentNoticeGenerationRequest.getNumberOfElementsTotal(),
+                    paymentNoticeGenerationRequest.getNumberOfElementsProcessed() +
+                            paymentNoticeGenerationRequest.getNumberOfElementsFailed())) {
+                if (paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
+                    noticeRequestCompleteProducer.noticeGeneration(paymentNoticeGenerationRequest);
+                }
+            }
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);

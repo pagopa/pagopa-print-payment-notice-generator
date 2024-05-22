@@ -3,6 +3,7 @@ package it.gov.pagopa.payment.notice.generator.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.payment.notice.generator.client.PdfEngineClient;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
+import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompleteProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
@@ -56,6 +57,9 @@ class NoticeGenerationServiceImplTest {
     @Mock
     PdfEngineClient pdfEngineClient;
 
+    @Mock
+    NoticeRequestCompleteProducer noticeRequestCompleteProducer;
+
     ObjectMapper objectMapper = new ObjectMapper();
 
     NoticeGenerationServiceImpl noticeGenerationService;
@@ -90,14 +94,14 @@ class NoticeGenerationServiceImplTest {
                 paymentGenerationRequestRepository, paymentGenerationRequestErrorRepository,
                 institutionsStorageClient, noticeStorageClient, noticeTemplateStorageClient,
                 pdfEngineClient, new Aes256Utils("test","test"), objectMapper,
-                validator);
+                validator, noticeRequestCompleteProducer);
     }
 
     @SneakyThrows
     @Test
     void processNoticeGenerationShouldReturnOkOnValidData() {
 
-        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().build()))
+        lenient().doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().build()))
                 .when(paymentGenerationRequestRepository).findById(any());
         doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
         doReturn(CreditorInstitution.builder()
@@ -113,6 +117,9 @@ class NoticeGenerationServiceImplTest {
                 .when(pdfEngineClient).generatePDF(any(), any());
         doReturn(true).when(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
         doReturn(1L).when(paymentGenerationRequestRepository).findAndAddItemById(any(),any());
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().numberOfElementsTotal(1).numberOfElementsFailed(0)
+                .numberOfElementsProcessed(1).build())).when(paymentGenerationRequestRepository)
+                .findById(any());
 
         NoticeRequestEH noticeRequestEH = NoticeRequestEH
                 .builder()
@@ -149,7 +156,6 @@ class NoticeGenerationServiceImplTest {
                         .build())
                 .build();
         noticeGenerationService.processNoticeGenerationEH(objectMapper.writeValueAsString(noticeRequestEH));
-        verify(paymentGenerationRequestRepository).findById(any());
         verify(paymentGenerationRequestRepository).findAndAddItemById(any(), any());
         verify(noticeStorageClient).savePdfToBlobStorage(any(),any(),any());
         verify(institutionsStorageClient).getInstitutionData(any());

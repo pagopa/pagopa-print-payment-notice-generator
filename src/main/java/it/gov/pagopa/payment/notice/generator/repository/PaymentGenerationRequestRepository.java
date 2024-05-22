@@ -1,6 +1,7 @@
 package it.gov.pagopa.payment.notice.generator.repository;
 
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
+import it.gov.pagopa.payment.notice.generator.model.enums.PaymentGenerationRequestStatus;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.mongodb.repository.Update;
@@ -16,6 +17,10 @@ public interface PaymentGenerationRequestRepository extends MongoRepository<Paym
             "'$inc' : { 'numberOfElementsProcessed' : 1 }, " +
             "'$addToSet' : { 'items' : '?1'} }")
     long findAndAddItemById(String folderId, String noticeId);
+
+    @Query("{'id' : ?0, 'status' : 'PROCESSING' }")
+    @Update("{ '$set': { 'status' : 'COMPLETING' } }")
+    long findAndSetToComplete(String folderId);
 
     @Update("{ '$inc' : { 'numberOfElementsFailed' : 1 } }")
     long findAndIncrementNumberOfElementsFailedById(String folderId);

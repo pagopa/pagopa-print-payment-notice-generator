@@ -85,6 +85,7 @@ microservice-chart:
     OTEL_TRACES_SAMPLER: "always_on"
     KAFKA_BROKER: "pagopa-d-itn-core-evh-meucci.servicebus.windows.net:9093"
     KAFKA_NOTICE_GENERATION_TOPIC: 'pagopa-printit-evh'
+    KAFKA_NOTICE_COMPLETE_TOPIC: 'pagopa-printit-complete-evh'
     PDF_ENGINE_ENDPOINT: 'https://api.dev.platform.pagopa.it/printit/pdf-engine-node/v1/generate-pdf'
     REST_CLIENT_LOGGER_LEVEL: 'FULL'
   envSecret:
@@ -96,6 +97,7 @@ microservice-chart:
     INSTITUTION_STORAGE_CONN_STRING: 'institutions-storage-account-connection-string'
     NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
     KAFKA_SASL_JAAS_CONFIG: 'ehub-d-notice-jaas-config'
+    NOTICE_COMPLETE_KAFKA_SASL_JAAS_CONFIG: 'ehub-d-notice-complete-jaas-config'
     PDF_ENGINE_SUBKEY: 'pdf-engine-node-subkey'
     AES_SECRET_KEY: 'aes-key'
     AES_SALT: 'aes-salt'
