@@ -101,8 +101,6 @@ class NoticeGenerationServiceImplTest {
     @Test
     void processNoticeGenerationShouldReturnOkOnValidData() {
 
-        lenient().doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().build()))
-                .when(paymentGenerationRequestRepository).findById(any());
         doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
         doReturn(CreditorInstitution.builder()
                     .webChannel(true)
@@ -120,6 +118,7 @@ class NoticeGenerationServiceImplTest {
         doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().numberOfElementsTotal(1).numberOfElementsFailed(0)
                 .numberOfElementsProcessed(1).build())).when(paymentGenerationRequestRepository)
                 .findById(any());
+        doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete(any());
 
         NoticeRequestEH noticeRequestEH = NoticeRequestEH
                 .builder()

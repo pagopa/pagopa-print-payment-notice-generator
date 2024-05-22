@@ -159,15 +159,15 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             if(!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, blobName)) {
                 throw new RuntimeException("Encountered error during blob saving");
             }
+
             paymentGenerationRequestRepository.findAndAddItemById(folderId, blobName);
             PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
                     paymentGenerationRequestRepository.findById(folderId).orElseThrow();
             if (Objects.equals(paymentNoticeGenerationRequest.getNumberOfElementsTotal(),
                     paymentNoticeGenerationRequest.getNumberOfElementsProcessed() +
-                            paymentNoticeGenerationRequest.getNumberOfElementsFailed())) {
-                if (paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
+                            paymentNoticeGenerationRequest.getNumberOfElementsFailed()) &&
+                paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
                     noticeRequestCompleteProducer.noticeGeneration(paymentNoticeGenerationRequest);
-                }
             }
 
         } catch (Exception e) {
@@ -246,7 +246,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     }
 
     private void findFolderIfExists(String folderId) {
-        paymentGenerationRequestRepository.findById(folderId)
+        PaymentNoticeGenerationRequest ignored =
+                paymentGenerationRequestRepository.findById(folderId)
                 .orElseThrow(() -> new AppException(AppError.FOLDER_NOT_AVAILABLE));
     }
 
