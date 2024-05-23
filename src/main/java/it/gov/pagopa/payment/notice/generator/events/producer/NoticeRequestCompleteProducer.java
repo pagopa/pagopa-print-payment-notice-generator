@@ -14,6 +14,6 @@ public interface NoticeRequestCompleteProducer {
      * @param paymentNoticeGenerationRequest data to send
      * @return boolean referring if the insertion on the sending channel was successfully
      */
-    boolean noticeGeneration(PaymentNoticeGenerationRequest paymentNoticeGenerationRequest);
+    boolean noticeComplete(PaymentNoticeGenerationRequest paymentNoticeGenerationRequest);
 
 }

@@ -27,7 +27,7 @@ public class NoticeRequestCompleteProducerImpl implements NoticeRequestCompleteP
     }
 
     @Override
-    public boolean noticeGeneration(PaymentNoticeGenerationRequest paymentNoticeGenerationRequest) {
+    public boolean noticeComplete(PaymentNoticeGenerationRequest paymentNoticeGenerationRequest) {
         return streamBridge.send("noticeComplete-out-0",
                 buildMessage(paymentNoticeGenerationRequest));
     }

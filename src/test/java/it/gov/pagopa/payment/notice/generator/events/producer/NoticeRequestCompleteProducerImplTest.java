@@ -29,7 +29,7 @@ class NoticeRequestCompleteProducerImplTest {
 
     @Test
     void noticeGeneration() {
-        noticeRequestCompleteProducer.noticeGeneration(PaymentNoticeGenerationRequest.builder().build());
+        noticeRequestCompleteProducer.noticeComplete(PaymentNoticeGenerationRequest.builder().build());
         verify(streamBridge).send(any(), any());
     }
 
