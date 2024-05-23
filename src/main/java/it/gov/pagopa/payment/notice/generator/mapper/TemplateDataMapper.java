@@ -15,6 +15,8 @@ import java.util.Locale;
  */
 public class TemplateDataMapper {
 
+    private static String POSTE_DOCUMENT_TYPE_CODE = "896";
+
     /**
      * Map notice generation dat
      * @param noticeRequestData request data
@@ -83,7 +85,7 @@ public class TemplateDataMapper {
                                 posteAuthCode,
                                 posteAccountNumber,
                                 noticeAmount,
-                                noticeRequestData.getNotice().getPosteDocumentType()
+                                POSTE_DOCUMENT_TYPE_CODE
                         ) : null)
                         .instalments(Installments.builder().items(noticeRequestData.getNotice().getInstallments() != null ?
                                 noticeRequestData.getNotice().getInstallments().stream().map(item ->
@@ -150,7 +152,7 @@ public class TemplateDataMapper {
                 .qrCode(generateQrCode(installmentData.getCode(), ciTaxCode, amount))
                 .amount(currencyFormat(amount))
                 .expiryDate(installmentData.getDueDate())
-                .posteDocumentType(installmentData.getPosteDocumentType())
+                .posteDocumentType("896")
                 .posteAuth(posteAuth)
                 .posteDataMatrix(posteAuth != null ?
                     generatePosteDataMatrix(
@@ -161,7 +163,7 @@ public class TemplateDataMapper {
                             posteAuth,
                             accountNumber,
                             String.valueOf(installmentData.getAmount()),
-                            installmentData.getPosteDocumentType()
+                            POSTE_DOCUMENT_TYPE_CODE
                     ) :
                         null
                 )

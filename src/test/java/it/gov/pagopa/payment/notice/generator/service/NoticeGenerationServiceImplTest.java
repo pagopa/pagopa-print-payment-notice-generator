@@ -195,7 +195,6 @@ class NoticeGenerationServiceImplTest {
                                         .dueDate("24/10/2024")
                                         .subject("subject")
                                         .paymentAmount(100L)
-                                        .posteDocumentType("0121")
                                         .installments(Collections.singletonList(
                                                 InstallmentData.builder()
                                                         .amount(100L)
@@ -307,7 +306,6 @@ class NoticeGenerationServiceImplTest {
                                         .dueDate("24/10/2024")
                                         .subject("subject")
                                         .paymentAmount(100L)
-                                        .posteDocumentType("0121")
                                         .installments(Collections.singletonList(
                                                 InstallmentData.builder()
                                                         .amount(100L)

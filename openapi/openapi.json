@@ -164,10 +164,6 @@
           "dueDate" : {
             "type" : "string",
             "description" : "Installment dueDate"
-          },
-          "posteDocumentType" : {
-            "type" : "string",
-            "description" : "Installment Poste Document Type"
           }
         },
         "description" : "Notice installments (if present)"
@@ -195,10 +191,6 @@
             "type" : "integer",
             "description" : "Notice total amount to pay",
             "format" : "int64"
-          },
-          "posteDocumentType" : {
-            "type" : "string",
-            "description" : "Poste Document Type related to main notice"
           },
           "subject" : {
             "type" : "string",

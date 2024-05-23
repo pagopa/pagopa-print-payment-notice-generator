@@ -18,7 +18,5 @@ public class InstallmentData {
     private Long amount;
     @Schema(description = "Installment dueDate", requiredMode = Schema.RequiredMode.REQUIRED)
     private String dueDate;
-    @Schema(description = "Installment Poste Document Type")
-    private String posteDocumentType;
 
 }
