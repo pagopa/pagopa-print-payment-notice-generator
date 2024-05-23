@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.payment.notice.generator.client.PdfEngineClient;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompleteProducer;
+import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestErrorProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
@@ -60,6 +61,9 @@ class NoticeGenerationServiceImplTest {
     @Mock
     NoticeRequestCompleteProducer noticeRequestCompleteProducer;
 
+    @Mock
+    NoticeRequestErrorProducer noticeRequestErrorProducer;
+
     ObjectMapper objectMapper = new ObjectMapper();
 
     NoticeGenerationServiceImpl noticeGenerationService;
@@ -94,7 +98,7 @@ class NoticeGenerationServiceImplTest {
                 paymentGenerationRequestRepository, paymentGenerationRequestErrorRepository,
                 institutionsStorageClient, noticeStorageClient, noticeTemplateStorageClient,
                 pdfEngineClient, new Aes256Utils("test","test"), objectMapper,
-                validator, noticeRequestCompleteProducer);
+                validator, noticeRequestCompleteProducer, noticeRequestErrorProducer);
     }
 
     @SneakyThrows

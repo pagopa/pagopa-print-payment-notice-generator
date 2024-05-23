@@ -5,6 +5,7 @@ import it.gov.pagopa.payment.notice.generator.client.PdfEngineClient;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompleteProducer;
+import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestErrorProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.mapper.TemplateDataMapper;
@@ -31,8 +32,6 @@ import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
@@ -62,6 +61,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
     private final NoticeRequestCompleteProducer noticeRequestCompleteProducer;
 
+    private final NoticeRequestErrorProducer noticeRequestErrorProducer;
+
     public NoticeGenerationServiceImpl(
             PaymentGenerationRequestRepository paymentGenerationRequestRepository,
             PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository,
@@ -71,7 +72,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             PdfEngineClient pdfEngineClient,
             Aes256Utils aes256Utils,
             ObjectMapper objectMapper,
-            Validator validator, NoticeRequestCompleteProducer noticeRequestCompleteProducer) {
+            Validator validator, NoticeRequestCompleteProducer noticeRequestCompleteProducer, NoticeRequestErrorProducer noticeRequestErrorProducer) {
         this.paymentGenerationRequestRepository = paymentGenerationRequestRepository;
         this.paymentGenerationRequestErrorRepository = paymentGenerationRequestErrorRepository;
         this.institutionsStorageClient = institutionsStorageClient;
@@ -82,6 +83,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         this.objectMapper = objectMapper;
         this.validator = validator;
         this.noticeRequestCompleteProducer = noticeRequestCompleteProducer;
+        this.noticeRequestErrorProducer = noticeRequestErrorProducer;
     }
 
     /**
@@ -226,7 +228,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     private void saveErrorEvent(
             String folderId, NoticeGenerationRequestItem noticeGenerationRequestItem, String error) {
         try {
-            paymentGenerationRequestErrorRepository.save(
+            PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
+                    paymentGenerationRequestErrorRepository.save(
                     PaymentNoticeGenerationRequestError.builder()
                             .errorDescription(error)
                             .folderId(folderId)
@@ -237,6 +240,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                             .build()
             );
             paymentGenerationRequestRepository.findAndIncrementNumberOfElementsFailedById(folderId);
+            noticeRequestErrorProducer.noticeError(paymentNoticeGenerationRequestError);
         } catch (Exception e) {
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
                     folderId,
