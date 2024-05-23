@@ -149,13 +149,14 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
     }
 
-    private void addNoticeIntoFolder(NoticeGenerationRequestItem noticeGenerationRequestItem, String folderId, PdfEngineResponse pdfEngineResponse) {
+    private void addNoticeIntoFolder(NoticeGenerationRequestItem noticeGenerationRequestItem,
+                                     String folderId, PdfEngineResponse pdfEngineResponse) {
         try (BufferedInputStream pdfStream = new BufferedInputStream(
                 new FileInputStream(pdfEngineResponse.getTempPdfPath()))) {
 
-            String dateFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
-            String blobName = String.format("%s-%s-%s", "pagopa-avviso", dateFormatted,
-                    noticeGenerationRequestItem.getData().getNotice().getCode());
+            String blobName = String.format("%s-%s-%s", "pagopa-avviso",
+                    noticeGenerationRequestItem.getData().getNotice().getCode(),
+                    noticeGenerationRequestItem.getTemplateId());
             if(!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, blobName)) {
                 throw new RuntimeException("Encountered error during blob saving");
             }
