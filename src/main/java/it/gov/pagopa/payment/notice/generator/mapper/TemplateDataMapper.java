@@ -29,7 +29,7 @@ public class TemplateDataMapper {
         String debtorTaxCode = noticeRequestData.getDebtor().getTaxCode();
         String fullName = noticeRequestData.getDebtor().getFullName();
         String subject = noticeRequestData.getNotice().getSubject();
-        String posteAuthCode = noticeRequestData.getNotice().getPosteAuth();
+        String posteAuthCode = noticeRequestData.getCreditorInstitution().getPosteAuth();
         String posteAccountNumber = noticeRequestData.getCreditorInstitution().getPosteAccountNumber();
 
 
@@ -94,6 +94,7 @@ public class TemplateDataMapper {
                                                 fullName,
                                                 subject,
                                                 posteAccountNumber,
+                                                posteAuthCode,
                                                 item
                                         )).toList() :
                                 Collections.emptyList()).build())
@@ -141,7 +142,7 @@ public class TemplateDataMapper {
     private static Installment mapInstallment(
             String cbill, String ciTaxCode, String debtorTaxCode,
             String fullname, String subject, String accountNumber,
-            InstallmentData installmentData) {
+            String posteAuth, InstallmentData installmentData) {
         String amount = String.valueOf(installmentData.getAmount());
         return Installment.builder()
                 .refNumber(installmentData.getCode())
@@ -150,14 +151,14 @@ public class TemplateDataMapper {
                 .amount(currencyFormat(amount))
                 .expiryDate(installmentData.getDueDate())
                 .posteDocumentType(installmentData.getPosteDocumentType())
-                .posteAuth(installmentData.getPosteAuth())
-                .posteDataMatrix(installmentData.getPosteAuth() != null ?
+                .posteAuth(posteAuth)
+                .posteDataMatrix(posteAuth != null ?
                     generatePosteDataMatrix(
                             ciTaxCode,
                             debtorTaxCode,
                             fullname,
                             subject,
-                            installmentData.getPosteAuth(),
+                            posteAuth,
                             accountNumber,
                             String.valueOf(installmentData.getAmount()),
                             installmentData.getPosteDocumentType()
