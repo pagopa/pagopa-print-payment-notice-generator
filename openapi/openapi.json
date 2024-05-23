@@ -98,6 +98,10 @@
             "type" : "string",
             "description" : "Poste account number"
           },
+          "posteAuth" : {
+            "type" : "string",
+            "description" : "Installment poste auth code"
+          },
           "taxCode" : {
             "type" : "string",
             "description" : "CI tax code"
@@ -161,13 +165,9 @@
             "type" : "string",
             "description" : "Installment dueDate"
           },
-          "posteAuth" : {
-            "type" : "string",
-            "description" : "Installment poste auth code"
-          },
           "posteDocumentType" : {
             "type" : "string",
-            "description" : "Poste Document Type"
+            "description" : "Installment Poste Document Type"
           }
         },
         "description" : "Notice installments (if present)"
@@ -196,13 +196,9 @@
             "description" : "Notice total amount to pay",
             "format" : "int64"
           },
-          "posteAuth" : {
-            "type" : "string",
-            "description" : "Poste auth code"
-          },
           "posteDocumentType" : {
             "type" : "string",
-            "description" : "Poste Document Type"
+            "description" : "Poste Document Type related to main notice"
           },
           "subject" : {
             "type" : "string",
