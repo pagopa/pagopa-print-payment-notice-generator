@@ -272,6 +272,77 @@ class NoticeGenerationServiceImplTest {
         verify(paymentGenerationRequestErrorRepository).save(any());
     }
 
+    @SneakyThrows
+    @Test
+    void processNoticeGenerationShouldReturnKOOnPDfEngineBadRequestWithRepoException() {
+
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().build()))
+                .when(paymentGenerationRequestRepository).findById(any());
+        doAnswer(item -> {
+            throw new Exception("Could not increment data");
+        }).when(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
+        doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
+        doReturn(CreditorInstitution.builder()
+                .webChannel(true)
+                .physicalChannel("Test")
+                .fullName("Test")
+                .logo("logo")
+                .cbill("Cbill")
+                .organization("ORG")
+                .posteAccountNumber("131213")
+                .posteAuth("322323")
+                .build()
+        ).when(institutionsStorageClient).getInstitutionData(any());
+        doReturn(getPdfEngineResponse(HttpStatus.SC_INTERNAL_SERVER_ERROR, noticeFile.getPath()))
+                .when(pdfEngineClient).generatePDF(any(), any());
+
+        NoticeRequestEH noticeRequestEH = NoticeRequestEH
+                .builder()
+                .folderId("test")
+                .noticeData(NoticeGenerationRequestItem.builder()
+                        .templateId("template")
+                        .data(NoticeRequestData.builder()
+                                .notice(Notice.builder()
+                                        .code("code")
+                                        .dueDate("24/10/2024")
+                                        .subject("subject")
+                                        .paymentAmount(100L)
+                                        .posteDocumentType("0121")
+                                        .installments(Collections.singletonList(
+                                                InstallmentData.builder()
+                                                        .amount(100L)
+                                                        .code("codeRate")
+                                                        .dueDate("24/10/2024")
+                                                        .build()
+                                        ))
+                                        .build())
+                                .creditorInstitution(CreditorInstitution.builder()
+                                        .taxCode("taxCode")
+                                        .build())
+                                .debtor(Debtor.builder()
+                                        .taxCode("taxCode")
+                                        .address("address")
+                                        .city("city")
+                                        .buildingNumber("101")
+                                        .postalCode("00135")
+                                        .province("RM")
+                                        .fullName("Test Name")
+                                        .build())
+                                .build())
+                        .build())
+                .build();
+        Assert.assertThrows(AppException.class, () ->
+                noticeGenerationService.processNoticeGenerationEH(
+                        objectMapper.writeValueAsString(noticeRequestEH)));
+        verify(paymentGenerationRequestRepository).findById(any());
+        verify(institutionsStorageClient).getInstitutionData(any());
+        verify(noticeTemplateStorageClient).getTemplate(any());
+        verify(pdfEngineClient).generatePDF(any(),any());
+        verify(paymentGenerationRequestErrorRepository).save(any());
+        verify(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
+        verifyNoInteractions(noticeStorageClient);
+    }
+
     private PdfEngineResponse getPdfEngineResponse(int status, String pdfPath) {
         PdfEngineResponse pdfEngineResponse = new PdfEngineResponse();
         pdfEngineResponse.setTempPdfPath(pdfPath);
