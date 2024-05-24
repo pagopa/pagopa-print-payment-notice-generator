@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineErrorResponse;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineRequest;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
@@ -27,19 +28,18 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
 @Component
-/**
+/*
  * Client for the PDF Engine
  */
+@Slf4j
 public class PdfEngineClientImpl implements PdfEngineClient {
-
-    private final String pdfEngineEndpoint;
-    private final String ocpAimSubKey;
 
     private static final String HEADER_AUTH_KEY = "Ocp-Apim-Subscription-Key";
     private static final String ZIP_FILE_NAME = "template.zip";
     private static final String TEMPLATE_KEY = "template";
     private static final String DATA_KEY = "data";
-
+    private final String pdfEngineEndpoint;
+    private final String ocpAimSubKey;
     private final HttpClientBuilder httpClientBuilder;
     private final ObjectMapper objectMapper;
 
@@ -89,7 +89,7 @@ public class PdfEngineClientImpl implements PdfEngineClient {
             HttpPost request = new HttpPost(pdfEngineEndpoint);
             request.setHeader(HEADER_AUTH_KEY, ocpAimSubKey);
             request.setEntity(entity);
-
+            log.debug("endpoint POST {} headers {} body {}", pdfEngineEndpoint, request.getAllHeaders(), pdfEngineRequest.getData());
             pdfEngineResponse = handlePdfEngineResponse(client, request, workingDirPath);
         } catch (IOException e) {
             handleExceptionErrorMessage(pdfEngineResponse, e);
@@ -113,7 +113,7 @@ public class PdfEngineClientImpl implements PdfEngineClient {
             HttpEntity entityResponse = response.getEntity();
 
             //Handles response
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK && entityResponse != null) {
+            if(response.getStatusLine().getStatusCode() == HttpStatus.SC_OK && entityResponse != null) {
                 try (InputStream inputStream = entityResponse.getContent()) {
                     pdfEngineResponse.setStatusCode(HttpStatus.SC_OK);
 
@@ -172,20 +172,20 @@ public class PdfEngineClientImpl implements PdfEngineClient {
             HttpEntity entityResponse
     ) throws IOException {
         //Verify if unauthorized
-        if (response != null &&
+        if(response != null &&
                 response.getStatusLine() != null &&
                 response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED
         ) {
             pdfEngineResponse.setErrorMessage("Unauthorized call to PDF engine function");
 
-        } else if (entityResponse != null) {
+        } else if(entityResponse != null) {
             //Handle JSON response
             String jsonString = EntityUtils.toString(entityResponse, StandardCharsets.UTF_8);
 
-            if (!jsonString.isEmpty()) {
+            if(!jsonString.isEmpty()) {
                 PdfEngineErrorResponse errorResponse = objectMapper.readValue(jsonString, PdfEngineErrorResponse.class);
 
-                if (errorResponse != null &&
+                if(errorResponse != null &&
                         errorResponse.getErrors() != null &&
                         !errorResponse.getErrors().isEmpty() &&
                         errorResponse.getErrors().get(0) != null
@@ -195,7 +195,7 @@ public class PdfEngineClientImpl implements PdfEngineClient {
             }
         }
 
-        if (pdfEngineResponse.getErrorMessage() == null) {
+        if(pdfEngineResponse.getErrorMessage() == null) {
             pdfEngineResponse.setErrorMessage("Unknown error in PDF engine function");
         }
     }

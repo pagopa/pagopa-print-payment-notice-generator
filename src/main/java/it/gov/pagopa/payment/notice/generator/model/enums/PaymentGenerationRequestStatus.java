@@ -7,7 +7,9 @@ public enum PaymentGenerationRequestStatus {
 
     INSERTED,
     PROCESSING,
+    COMPLETING,
     FAILED,
-    PROCESSED
+    PROCESSED,
+    PROCESSED_WITH_FAILURES
 
 }

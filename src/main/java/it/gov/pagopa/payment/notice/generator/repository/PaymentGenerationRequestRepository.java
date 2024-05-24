@@ -6,8 +6,6 @@ import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.mongodb.repository.Update;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
-
 @Repository
 public interface PaymentGenerationRequestRepository extends MongoRepository<PaymentNoticeGenerationRequest, String> {
 
@@ -16,6 +14,10 @@ public interface PaymentGenerationRequestRepository extends MongoRepository<Paym
             "'$inc' : { 'numberOfElementsProcessed' : 1 }, " +
             "'$addToSet' : { 'items' : '?1'} }")
     long findAndAddItemById(String folderId, String noticeId);
+
+    @Query("{'id' : ?0, 'status' : 'PROCESSING' }")
+    @Update("{ '$set': { 'status' : 'COMPLETING' } }")
+    long findAndSetToComplete(String folderId);
 
     @Update("{ '$inc' : { 'numberOfElementsFailed' : 1 } }")
     long findAndIncrementNumberOfElementsFailedById(String folderId);

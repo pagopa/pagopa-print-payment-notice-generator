@@ -1,4 +1,4 @@
-package it.gov.pagopa.payment.notice.generator.consumer;
+package it.gov.pagopa.payment.notice.generator.events.consumer;
 
 import it.gov.pagopa.payment.notice.generator.service.NoticeGenerationService;
 import lombok.extern.slf4j.Slf4j;

@@ -41,7 +41,16 @@ microservice-chart:
     seccompProfile:
       type: RuntimeDefault
   securityContext:
-    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: true
+    capabilities:
+      drop:
+        - all
+  tmpVolumeMount:
+    create: true
+    mounts:
+      - name: temp
+        mountPath: /temp
   resources:
     requests:
       memory: "512Mi"
@@ -88,6 +97,7 @@ microservice-chart:
     NOTICE_STORAGE_CONN_STRING: 'notices_storage_account_connection_string'
     KAFKA_SASL_JAAS_CONFIG: 'ehub_notice_connection_string'
     PDF_ENGINE_SUBKEY: 'pdf_engine_node_subkey'
+    NOTICE_COMPLETE_KAFKA_SASL_JAAS_CONFIG: 'ehub-u-notice-complete-jaas-config'
   keyvault:
     name: "pagopa-p-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"

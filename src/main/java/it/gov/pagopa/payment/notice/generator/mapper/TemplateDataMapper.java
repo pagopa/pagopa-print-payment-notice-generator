@@ -15,6 +15,8 @@ import java.util.Locale;
  */
 public class TemplateDataMapper {
 
+    private static String POSTE_DOCUMENT_TYPE_CODE = "896";
+
     /**
      * Map notice generation dat
      * @param noticeRequestData request data
@@ -29,7 +31,7 @@ public class TemplateDataMapper {
         String debtorTaxCode = noticeRequestData.getDebtor().getTaxCode();
         String fullName = noticeRequestData.getDebtor().getFullName();
         String subject = noticeRequestData.getNotice().getSubject();
-        String posteAuthCode = noticeRequestData.getNotice().getPosteAuth();
+        String posteAuthCode = noticeRequestData.getCreditorInstitution().getPosteAuth();
         String posteAccountNumber = noticeRequestData.getCreditorInstitution().getPosteAccountNumber();
 
 
@@ -74,7 +76,7 @@ public class TemplateDataMapper {
                         .subject(noticeRequestData.getNotice().getSubject())
                         .amount(currencyFormat(noticeAmount))
                         .posteAuth(posteAuthCode)
-                        .posteDocumentType(noticeRequestData.getNotice().getPosteDocumentType())
+                        .posteDocumentType(POSTE_DOCUMENT_TYPE_CODE)
                         .expiryDate(noticeRequestData.getNotice().getDueDate())
                         .posteDataMatrix(posteAuthCode != null ?
                                 generatePosteDataMatrix(
@@ -85,7 +87,7 @@ public class TemplateDataMapper {
                                 posteAuthCode,
                                 posteAccountNumber,
                                 noticeAmount,
-                                noticeRequestData.getNotice().getPosteDocumentType()
+                                POSTE_DOCUMENT_TYPE_CODE
                         ) : null)
                         .instalments(Installments.builder().items(noticeRequestData.getNotice().getInstallments() != null ?
                                 noticeRequestData.getNotice().getInstallments().stream().map(item ->
@@ -96,6 +98,7 @@ public class TemplateDataMapper {
                                                 fullName,
                                                 subject,
                                                 posteAccountNumber,
+                                                posteAuthCode,
                                                 item
                                         )).toList() :
                                 Collections.emptyList()).build())
@@ -143,7 +146,7 @@ public class TemplateDataMapper {
     private static Installment mapInstallment(
             String cbill, String ciTaxCode, String debtorTaxCode,
             String fullname, String subject, String accountNumber,
-            InstallmentData installmentData) {
+            String posteAuth, InstallmentData installmentData) {
         String amount = String.valueOf(installmentData.getAmount());
         return Installment.builder()
                 .refNumber(installmentData.getCode())
@@ -151,18 +154,18 @@ public class TemplateDataMapper {
                 .qrCode(generateQrCode(installmentData.getCode(), ciTaxCode, amount))
                 .amount(currencyFormat(amount))
                 .expiryDate(installmentData.getDueDate())
-                .posteDocumentType(installmentData.getPosteDocumentType())
-                .posteAuth(installmentData.getPosteAuth())
-                .posteDataMatrix(installmentData.getPosteAuth() != null ?
+                .posteDocumentType(POSTE_DOCUMENT_TYPE_CODE)
+                .posteAuth(posteAuth)
+                .posteDataMatrix(posteAuth != null ?
                     generatePosteDataMatrix(
                             ciTaxCode,
                             debtorTaxCode,
                             fullname,
                             subject,
-                            installmentData.getPosteAuth(),
+                            posteAuth,
                             accountNumber,
                             String.valueOf(installmentData.getAmount()),
-                            installmentData.getPosteDocumentType()
+                            POSTE_DOCUMENT_TYPE_CODE
                     ) :
                         null
                 )
