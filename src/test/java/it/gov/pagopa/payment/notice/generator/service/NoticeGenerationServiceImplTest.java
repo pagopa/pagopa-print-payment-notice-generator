@@ -8,6 +8,7 @@ import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestError
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
+import it.gov.pagopa.payment.notice.generator.model.enums.PaymentGenerationRequestStatus;
 import it.gov.pagopa.payment.notice.generator.model.notice.*;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineResponse;
 import it.gov.pagopa.payment.notice.generator.repository.PaymentGenerationRequestErrorRepository;
@@ -119,8 +120,9 @@ class NoticeGenerationServiceImplTest {
                 .when(pdfEngineClient).generatePDF(any(), any());
         doReturn(true).when(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
         doReturn(1L).when(paymentGenerationRequestRepository).findAndAddItemById(any(),any());
-        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().numberOfElementsTotal(1).numberOfElementsFailed(0)
-                .numberOfElementsProcessed(1).build())).when(paymentGenerationRequestRepository)
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.PROCESSING)
+                .numberOfElementsTotal(1).numberOfElementsFailed(0)
+                .items(Collections.singletonList("test")).build())).when(paymentGenerationRequestRepository)
                 .findById(any());
         doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete(any());
 
@@ -271,8 +273,9 @@ class NoticeGenerationServiceImplTest {
                                 .build())
                         .build())
                 .build();
-        noticeGenerationService.processNoticeGenerationEH(objectMapper.writeValueAsString(noticeRequestEH));
-        verify(paymentGenerationRequestErrorRepository).save(any());
+        Assert.assertThrows(AppException.class, () ->
+                noticeGenerationService.processNoticeGenerationEH(
+                        objectMapper.writeValueAsString(noticeRequestEH)));
     }
 
     @SneakyThrows
