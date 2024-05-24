@@ -73,6 +73,8 @@ public class TemplateDataMapper {
                         )
                         .subject(noticeRequestData.getNotice().getSubject())
                         .amount(currencyFormat(noticeAmount))
+                        .posteAuth(posteAuthCode)
+                        .posteDocumentType(noticeRequestData.getNotice().getPosteDocumentType())
                         .expiryDate(noticeRequestData.getNotice().getDueDate())
                         .posteDataMatrix(posteAuthCode != null ?
                                 generatePosteDataMatrix(
