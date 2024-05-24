@@ -152,7 +152,7 @@ public class TemplateDataMapper {
                 .qrCode(generateQrCode(installmentData.getCode(), ciTaxCode, amount))
                 .amount(currencyFormat(amount))
                 .expiryDate(installmentData.getDueDate())
-                .posteDocumentType("896")
+                .posteDocumentType(POSTE_DOCUMENT_TYPE_CODE)
                 .posteAuth(posteAuth)
                 .posteDataMatrix(posteAuth != null ?
                     generatePosteDataMatrix(
