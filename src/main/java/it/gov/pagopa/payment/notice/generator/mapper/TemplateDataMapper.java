@@ -28,6 +28,8 @@ public class TemplateDataMapper {
         String cbill = noticeRequestData.getCreditorInstitution().getCbill();
         String ciTaxCode = noticeRequestData.getCreditorInstitution().getTaxCode();
         String noticeAmount = String.valueOf(noticeRequestData.getNotice().getPaymentAmount());
+        Long reduceAmount = noticeRequestData.getNotice().getReducedAmount();
+        Long discountedAmount = noticeRequestData.getNotice().getDiscountedAmount();
         String debtorTaxCode = noticeRequestData.getDebtor().getTaxCode();
         String fullName = noticeRequestData.getDebtor().getFullName();
         String subject = noticeRequestData.getNotice().getSubject();
@@ -89,7 +91,17 @@ public class TemplateDataMapper {
                                 noticeAmount,
                                 POSTE_DOCUMENT_TYPE_CODE
                         ) : null)
-                        .instalments(Installments.builder().items(noticeRequestData.getNotice().getInstallments() != null ?
+                        .instalments(Installments.builder()
+                                .reduced(InstallmentReduced.builder().amount(
+                                        reduceAmount != null ? currencyFormat(
+                                                String.valueOf(reduceAmount)) : null)
+                                        .build())
+                                .discounted(InstallmentDiscounted.builder().amount(
+                                        discountedAmount != null ? currencyFormat(
+                                                String.valueOf(discountedAmount)) :
+                                                null
+                                        ).build())
+                                .items(noticeRequestData.getNotice().getInstallments() != null ?
                                 noticeRequestData.getNotice().getInstallments().stream().map(item ->
                                         mapInstallment(
                                                 ciTaxCode,

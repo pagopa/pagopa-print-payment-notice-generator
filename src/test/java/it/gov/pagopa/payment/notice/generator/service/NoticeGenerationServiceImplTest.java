@@ -137,6 +137,8 @@ class NoticeGenerationServiceImplTest {
                                         .dueDate("24/10/2024")
                                         .subject("subject")
                                         .paymentAmount(100L)
+                                        .reducedAmount(80L)
+                                        .discountedAmount(60L)
                                         .installments(Collections.singletonList(
                                                 InstallmentData.builder()
                                                         .amount(100L)
