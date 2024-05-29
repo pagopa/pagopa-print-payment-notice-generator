@@ -6,7 +6,8 @@ import java.io.File;
 
 public interface NoticeGenerationService {
     File generateNotice(NoticeGenerationRequestItem noticeGenerationRequestItem,
-                        String folderId) ;
+                        String folderId,
+                        String errorId) ;
 
     void processNoticeGenerationEH(String message);
 }

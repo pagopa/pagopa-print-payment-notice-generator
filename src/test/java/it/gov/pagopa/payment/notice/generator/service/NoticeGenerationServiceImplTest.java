@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.payment.notice.generator.client.PdfEngineClient;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompleteProducer;
+import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestErrorProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
+import it.gov.pagopa.payment.notice.generator.model.enums.PaymentGenerationRequestStatus;
 import it.gov.pagopa.payment.notice.generator.model.notice.*;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineResponse;
 import it.gov.pagopa.payment.notice.generator.repository.PaymentGenerationRequestErrorRepository;
@@ -60,6 +62,9 @@ class NoticeGenerationServiceImplTest {
     @Mock
     NoticeRequestCompleteProducer noticeRequestCompleteProducer;
 
+    @Mock
+    NoticeRequestErrorProducer noticeRequestErrorProducer;
+
     ObjectMapper objectMapper = new ObjectMapper();
 
     NoticeGenerationServiceImpl noticeGenerationService;
@@ -94,7 +99,7 @@ class NoticeGenerationServiceImplTest {
                 paymentGenerationRequestRepository, paymentGenerationRequestErrorRepository,
                 institutionsStorageClient, noticeStorageClient, noticeTemplateStorageClient,
                 pdfEngineClient, new Aes256Utils("test","test"), objectMapper,
-                validator, noticeRequestCompleteProducer);
+                validator, noticeRequestCompleteProducer, noticeRequestErrorProducer);
     }
 
     @SneakyThrows
@@ -115,8 +120,9 @@ class NoticeGenerationServiceImplTest {
                 .when(pdfEngineClient).generatePDF(any(), any());
         doReturn(true).when(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
         doReturn(1L).when(paymentGenerationRequestRepository).findAndAddItemById(any(),any());
-        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().numberOfElementsTotal(1).numberOfElementsFailed(0)
-                .numberOfElementsProcessed(1).build())).when(paymentGenerationRequestRepository)
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.PROCESSING)
+                .numberOfElementsTotal(1).numberOfElementsFailed(0)
+                .items(Collections.singletonList("test")).build())).when(paymentGenerationRequestRepository)
                 .findById(any());
         doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete(any());
 
@@ -131,6 +137,8 @@ class NoticeGenerationServiceImplTest {
                                         .dueDate("24/10/2024")
                                         .subject("subject")
                                         .paymentAmount(100L)
+                                        .reducedAmount(80L)
+                                        .discountedAmount(60L)
                                         .installments(Collections.singletonList(
                                                 InstallmentData.builder()
                                                         .amount(100L)
@@ -267,8 +275,9 @@ class NoticeGenerationServiceImplTest {
                                 .build())
                         .build())
                 .build();
-        noticeGenerationService.processNoticeGenerationEH(objectMapper.writeValueAsString(noticeRequestEH));
-        verify(paymentGenerationRequestErrorRepository).save(any());
+        Assert.assertThrows(AppException.class, () ->
+                noticeGenerationService.processNoticeGenerationEH(
+                        objectMapper.writeValueAsString(noticeRequestEH)));
     }
 
     @SneakyThrows

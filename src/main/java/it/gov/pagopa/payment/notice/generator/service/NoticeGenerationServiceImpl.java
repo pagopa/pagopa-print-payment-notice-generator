@@ -1,15 +1,18 @@
 package it.gov.pagopa.payment.notice.generator.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.payment.notice.generator.client.PdfEngineClient;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompleteProducer;
+import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestErrorProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.mapper.TemplateDataMapper;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
+import it.gov.pagopa.payment.notice.generator.model.enums.PaymentGenerationRequestStatus;
 import it.gov.pagopa.payment.notice.generator.model.notice.CreditorInstitution;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineRequest;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineResponse;
@@ -31,8 +34,6 @@ import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
@@ -62,6 +63,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
     private final NoticeRequestCompleteProducer noticeRequestCompleteProducer;
 
+    private final NoticeRequestErrorProducer noticeRequestErrorProducer;
+
     public NoticeGenerationServiceImpl(
             PaymentGenerationRequestRepository paymentGenerationRequestRepository,
             PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository,
@@ -71,7 +74,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             PdfEngineClient pdfEngineClient,
             Aes256Utils aes256Utils,
             ObjectMapper objectMapper,
-            Validator validator, NoticeRequestCompleteProducer noticeRequestCompleteProducer) {
+            Validator validator, NoticeRequestCompleteProducer noticeRequestCompleteProducer, NoticeRequestErrorProducer noticeRequestErrorProducer) {
         this.paymentGenerationRequestRepository = paymentGenerationRequestRepository;
         this.paymentGenerationRequestErrorRepository = paymentGenerationRequestErrorRepository;
         this.institutionsStorageClient = institutionsStorageClient;
@@ -82,6 +85,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         this.objectMapper = objectMapper;
         this.validator = validator;
         this.noticeRequestCompleteProducer = noticeRequestCompleteProducer;
+        this.noticeRequestErrorProducer = noticeRequestErrorProducer;
     }
 
     /**
@@ -95,7 +99,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     @SneakyThrows
     @Override
     public File generateNotice(NoticeGenerationRequestItem noticeGenerationRequestItem,
-                               String folderId) {
+                               String folderId,
+                               String errorId) {
 
         if(folderId != null) {
             findFolderIfExists(folderId);
@@ -135,6 +140,10 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             if(folderId != null) {
                 addNoticeIntoFolder(noticeGenerationRequestItem, folderId, pdfEngineResponse);
+                if (errorId != null) {
+                    paymentGenerationRequestErrorRepository.deleteById(errorId);
+                    paymentGenerationRequestRepository.findAndDecrementNumberOfElementsFailedById(folderId);
+                }
             }
 
             return new File(pdfEngineResponse.getTempPdfPath());
@@ -142,7 +151,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             if(folderId != null) {
-                saveErrorEvent(folderId, noticeGenerationRequestItem, e.getMessage());
+                saveErrorEvent(errorId, folderId, noticeGenerationRequestItem, e.getMessage());
             }
             throw e;
         }
@@ -164,9 +173,10 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             paymentGenerationRequestRepository.findAndAddItemById(folderId, blobName);
             PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
                     paymentGenerationRequestRepository.findById(folderId).orElseThrow();
-            if (Objects.equals(paymentNoticeGenerationRequest.getNumberOfElementsTotal(),
-                    paymentNoticeGenerationRequest.getNumberOfElementsProcessed() +
-                            paymentNoticeGenerationRequest.getNumberOfElementsFailed()) &&
+            if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING) &&
+                    paymentNoticeGenerationRequest.getNumberOfElementsTotal() <=
+                    paymentNoticeGenerationRequest.getItems().size() +
+                    paymentNoticeGenerationRequest.getNumberOfElementsFailed() &&
                 paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
                     noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
             }
@@ -187,6 +197,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
         String folderId = null;
         NoticeGenerationRequestItem noticeGenerationRequestItem = null;
+        String errorId = null;
 
         try {
 
@@ -198,8 +209,9 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             folderId = noticeRequestEH.getFolderId();
             noticeGenerationRequestItem = noticeRequestEH.getNoticeData();
+            errorId = noticeRequestEH.getErrorId();
 
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.error(e.getMessage(), e);
             try {
                 paymentGenerationRequestErrorRepository.save(
@@ -218,25 +230,31 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         }
 
         if(noticeGenerationRequestItem != null && folderId != null) {
-            generateNotice(noticeGenerationRequestItem, folderId);
+            generateNotice(noticeGenerationRequestItem, folderId, errorId);
         }
 
     }
 
     private void saveErrorEvent(
-            String folderId, NoticeGenerationRequestItem noticeGenerationRequestItem, String error) {
+            String errorId, String folderId,
+            NoticeGenerationRequestItem noticeGenerationRequestItem,
+            String error) {
         try {
-            paymentGenerationRequestErrorRepository.save(
+            PaymentNoticeGenerationRequestError toSave = errorId != null ?
+                    paymentGenerationRequestErrorRepository.findById(errorId).orElseThrow() :
                     PaymentNoticeGenerationRequestError.builder()
+                            .id(errorId)
                             .errorDescription(error)
                             .folderId(folderId)
                             .data(aes256Utils.encrypt(objectMapper
                                     .writeValueAsString(noticeGenerationRequestItem)))
                             .createdAt(Instant.now())
-                            .numberOfAttempts(0)
-                            .build()
-            );
+                            .build();
+            toSave.setErrorDescription(error);
+            PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
+                    paymentGenerationRequestErrorRepository.save(toSave);
             paymentGenerationRequestRepository.findAndIncrementNumberOfElementsFailedById(folderId);
+            noticeRequestErrorProducer.noticeError(paymentNoticeGenerationRequestError);
         } catch (Exception e) {
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
                     folderId,

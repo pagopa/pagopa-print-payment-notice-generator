@@ -51,7 +51,7 @@ public class NoticeGenerationController {
             @RequestParam(value = "folderId", required = false) String folderId,
             @Parameter(description = "templateId to use for retrieval")
             @Valid @NotNull @RequestBody NoticeGenerationRequestItem noticeGenerationRequestItem) {
-        File file = noticeGenerationService.generateNotice(noticeGenerationRequestItem, folderId);
+        File file = noticeGenerationService.generateNotice(noticeGenerationRequestItem, folderId, null);
         try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file))) {
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"");

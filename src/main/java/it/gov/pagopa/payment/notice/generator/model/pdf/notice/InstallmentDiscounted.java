@@ -5,18 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Installments {
+public class InstallmentDiscounted {
 
-    private List<Installment> items;
-
-    private InstallmentDiscounted discounted;
-
-    private InstallmentReduced reduced;
+    private String amount;
 
 }

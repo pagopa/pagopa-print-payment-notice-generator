@@ -11,7 +11,6 @@ public interface PaymentGenerationRequestRepository extends MongoRepository<Paym
 
     @Query("{'id' : ?0}")
     @Update("{ '$set': { 'status' : 'PROCESSING' }, " +
-            "'$inc' : { 'numberOfElementsProcessed' : 1 }, " +
             "'$addToSet' : { 'items' : '?1'} }")
     long findAndAddItemById(String folderId, String noticeId);
 
@@ -21,5 +20,9 @@ public interface PaymentGenerationRequestRepository extends MongoRepository<Paym
 
     @Update("{ '$inc' : { 'numberOfElementsFailed' : 1 } }")
     long findAndIncrementNumberOfElementsFailedById(String folderId);
+
+    @Query("{'id' : ?0, 'numberOfElementsFailed': { '$gte': 1 } }")
+    @Update("{ '$inc' : { 'numberOfElementsFailed' : -1 } }")
+    void findAndDecrementNumberOfElementsFailedById(String folderId);
 
 }

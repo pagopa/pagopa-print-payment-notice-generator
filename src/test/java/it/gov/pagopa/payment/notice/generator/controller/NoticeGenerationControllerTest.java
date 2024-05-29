@@ -46,7 +46,7 @@ class NoticeGenerationControllerTest {
     void generateNoticeShouldReturnFileOnOk() throws Exception {
         File tempDirectory = Files.createTempDirectory("test").toFile();
         File file = Files.createTempFile(tempDirectory.toPath(), "test", ".zip").toFile();
-        when(noticeGenerationService.generateNotice(any(),any()))
+        when(noticeGenerationService.generateNotice(any(),any(), any()))
                 .thenReturn(file);
         String url = "/notices/generate";
         mvc.perform(post(url)
@@ -57,12 +57,12 @@ class NoticeGenerationControllerTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM));
-        verify(noticeGenerationService).generateNotice(any(),any());
+        verify(noticeGenerationService).generateNotice(any(),any(), any());
     }
 
     @Test
     void generateNoticeShouldReturnKOonErrorFile() throws Exception {
-        when(noticeGenerationService.generateNotice(any(),any()))
+        when(noticeGenerationService.generateNotice(any(),any(), any()))
                 .thenReturn(null);
         String url = "/notices/generate";
         mvc.perform(post(url)
@@ -72,7 +72,7 @@ class NoticeGenerationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().is5xxServerError());
-        verify(noticeGenerationService).generateNotice(any(),any());
+        verify(noticeGenerationService).generateNotice(any(),any(), any());
     }
 
     private static NoticeGenerationRequestItem getNoticeGenerationRequestItem() {
