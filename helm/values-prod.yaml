@@ -34,9 +34,9 @@ microservice-chart:
     servicePort: 8080
   serviceAccount:
     create: false
-    annotations: {}
+    annotations: { }
     name: ""
-  podAnnotations: {}
+  podAnnotations: { }
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -85,24 +85,29 @@ microservice-chart:
     OTEL_TRACES_SAMPLER: "always_on"
     KAFKA_BROKER: "pagopa-p-itn-core-evh-meucci.servicebus.windows.net:9093"
     KAFKA_NOTICE_GENERATION_TOPIC: pagopa-printit-evh
-    PDF_ENGINE_ENDPOINT: 'https://api.platform.pagopa.it/printit/pdf-engine-node/v1/generate-pdf'
+    KAFKA_NOTICE_COMPLETE_TOPIC: 'pagopa-printit-complete-evh'
+    KAFKA_NOTICE_ERROR_TOPIC: 'pagopa-printit-errors-evh'
+    PDF_ENGINE_ENDPOINT: 'https://api.platform.pagopa.it/printit/pdf-engine/v1/generate-pdf'
     REST_CLIENT_LOGGER_LEVEL: 'NONE'
   envSecret:
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-p-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: elastic-apm-secret-token
-    MONGODB_CONNECTION_URI: 'notices_mongo_connection_string'
-    TEMPLATE_STORAGE_CONN_STRING: 'templates_storage_account_connection_string'
-    INSTITUTION_STORAGE_CONN_STRING: 'institutions_storage_account_connection_string'
-    NOTICE_STORAGE_CONN_STRING: 'notices_storage_account_connection_string'
-    KAFKA_SASL_JAAS_CONFIG: 'ehub_notice_connection_string'
-    PDF_ENGINE_SUBKEY: 'pdf_engine_node_subkey'
-    NOTICE_COMPLETE_KAFKA_SASL_JAAS_CONFIG: 'ehub-u-notice-complete-jaas-config'
+    MONGODB_CONNECTION_URI: 'notices-mongo-connection-string'
+    TEMPLATE_STORAGE_CONN_STRING: 'templates-storage-account-connection-string'
+    INSTITUTION_STORAGE_CONN_STRING: 'institutions-storage-account-connection-string'
+    NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
+    KAFKA_SASL_JAAS_CONFIG: 'ehub-notice-connection-string'
+    NOTICE_COMPLETE_KAFKA_SASL_JAAS_CONFIG: 'ehub-p-notice-complete-jaas-config'
+    NOTICE_ERROR_KAFKA_SASL_JAAS_CONFIG: 'ehub-p-notice-errors-jaas-config'
+    PDF_ENGINE_SUBKEY: 'pdf-engine-node-subkey'
+    AES_SECRET_KEY: 'aes-key'
+    AES_SALT: 'aes-salt'
   keyvault:
     name: "pagopa-p-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: {}
-  tolerations: []
+  nodeSelector: { }
+  tolerations: [ ]
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -129,5 +134,5 @@ microservice-chart:
         repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
         tag: "0.0.0"
         pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+      envConfig: { }
+      envSecret: { }
