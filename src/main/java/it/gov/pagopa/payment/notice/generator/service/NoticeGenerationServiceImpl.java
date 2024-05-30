@@ -34,7 +34,6 @@ import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.Objects;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
@@ -140,7 +139,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             if(folderId != null) {
                 addNoticeIntoFolder(noticeGenerationRequestItem, folderId, pdfEngineResponse);
-                if (errorId != null) {
+                if(errorId != null) {
                     paymentGenerationRequestErrorRepository.deleteById(errorId);
                     paymentGenerationRequestRepository.findAndDecrementNumberOfElementsFailedById(folderId);
                 }
@@ -173,12 +172,12 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             paymentGenerationRequestRepository.findAndAddItemById(folderId, blobName);
             PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
                     paymentGenerationRequestRepository.findById(folderId).orElseThrow();
-            if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING) &&
+            if(paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING) &&
                     paymentNoticeGenerationRequest.getNumberOfElementsTotal() <=
-                    paymentNoticeGenerationRequest.getItems().size() +
-                    paymentNoticeGenerationRequest.getNumberOfElementsFailed() &&
-                paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
-                    noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
+                            paymentNoticeGenerationRequest.getItems().size() +
+                                    paymentNoticeGenerationRequest.getNumberOfElementsFailed() &&
+                    paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
+                noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
             }
 
         } catch (Exception e) {
@@ -195,6 +194,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     @Override
     public void processNoticeGenerationEH(String message) {
 
+
         String folderId = null;
         NoticeGenerationRequestItem noticeGenerationRequestItem = null;
         String errorId = null;
@@ -202,6 +202,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         try {
 
             NoticeRequestEH noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
+            log.info("Process a new Generation Request Event: {}", noticeRequestEH);
 
             if(!validator.validate(noticeRequestEH).isEmpty()) {
                 throw new AppException(AppError.MESSAGE_VALIDATION_ERROR);
@@ -267,7 +268,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     private void findFolderIfExists(String folderId) {
         PaymentNoticeGenerationRequest ignored =
                 paymentGenerationRequestRepository.findById(folderId)
-                .orElseThrow(() -> new AppException(AppError.FOLDER_NOT_AVAILABLE));
+                        .orElseThrow(() -> new AppException(AppError.FOLDER_NOT_AVAILABLE));
     }
 
 }
