@@ -6,9 +6,11 @@ import it.gov.pagopa.payment.notice.generator.model.pdf.notice.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Class containing methods to map paymentNotice data to use in notice generation
@@ -43,8 +45,8 @@ public class TemplateDataMapper {
                         .name(noticeRequestData.getCreditorInstitution().getFullName())
                         .channel(Channel.builder().online(
                                 Online.builder()
-                                        .website(noticeRequestData.getCreditorInstitution().getWebChannel())
-                                        .app(!noticeRequestData.getCreditorInstitution().getWebChannel())
+                                        .website(Objects.requireNonNullElse(noticeRequestData.getCreditorInstitution().getWebChannel(), false))
+                                        .app(Objects.requireNonNullElse(noticeRequestData.getCreditorInstitution().getAppChannel(), false))
                                         .build())
                                 .physical(Physical.builder()
                                         .data(noticeRequestData.getCreditorInstitution().getPhysicalChannel())
@@ -149,8 +151,7 @@ public class TemplateDataMapper {
         return String.join("|",
                 "PAGOPA","002",
                 StringUtils.leftPad(code, 18, "0"),
-                StringUtils.leftPad(code, 11, "0"),
-                taxCode,
+                StringUtils.leftPad(taxCode, 11, "0"),
                 amount
         );
     }
@@ -185,7 +186,9 @@ public class TemplateDataMapper {
     }
 
     private static String currencyFormat(String value) {
-        BigDecimal valueToFormat = new BigDecimal(value);
+        BigDecimal amount = new BigDecimal(value);
+        BigDecimal divider = new BigDecimal(100);
+        BigDecimal valueToFormat = amount.divide(divider, 2, RoundingMode.UNNECESSARY);
         NumberFormat numberFormat = NumberFormat.getInstance(Locale.ITALY);
         numberFormat.setMaximumFractionDigits(2);
         numberFormat.setMinimumFractionDigits(2);
