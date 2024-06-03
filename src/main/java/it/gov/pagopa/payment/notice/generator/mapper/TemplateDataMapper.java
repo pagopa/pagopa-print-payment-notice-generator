@@ -92,7 +92,8 @@ public class TemplateDataMapper {
                                 posteAuthCode,
                                 posteAccountNumber,
                                 noticeAmount,
-                                POSTE_DOCUMENT_TYPE_CODE
+                                POSTE_DOCUMENT_TYPE_CODE,
+                                noticeCode
                         ) : null)
                         .instalments(Installments.builder()
                                 .reduced(InstallmentReduced.builder().amount(
@@ -114,7 +115,8 @@ public class TemplateDataMapper {
                                                 subject,
                                                 posteAccountNumber,
                                                 posteAuthCode,
-                                                item
+                                                item,
+                                                noticeCode
                                         )).toList() :
                                 Collections.emptyList()).build())
                         .build())
@@ -123,7 +125,7 @@ public class TemplateDataMapper {
 
     private static String generatePosteDataMatrix(
             String ciTaxCode, String debtorTaxCode, String fullName, String subject, String authCode,
-            String posteAccountNumber, String amount, String posteTypeCode
+            String posteAccountNumber, String amount, String posteTypeCode, String noticeCode
     ) {
         return String.join("",
                 "codfase=NBPA;",
@@ -137,10 +139,10 @@ public class TemplateDataMapper {
                 "A");
     }
 
-    private static String generateCodeline(String posteAuthCode, String posteAccountNumber,
+    private static String generateCodeline(String noticeCode, String posteAccountNumber,
                                            String amount, String posteTypeCode) {
         return String.join("","18",
-                StringUtils.leftPad(posteAuthCode, 18, "0"),
+                StringUtils.leftPad(noticeCode, 18, "0"),
                 "12",
                 StringUtils.leftPad(posteAccountNumber, 12, "0"),
                 "10",
@@ -160,7 +162,8 @@ public class TemplateDataMapper {
     private static Installment mapInstallment(
             String cbill, String ciTaxCode, String debtorTaxCode,
             String fullname, String subject, String accountNumber,
-            String posteAuth, InstallmentData installmentData) {
+            String posteAuth, InstallmentData installmentData,
+            String noticeCode) {
         String amount = String.valueOf(installmentData.getAmount());
         return Installment.builder()
                 .refNumber(installmentData.getCode())
@@ -179,7 +182,8 @@ public class TemplateDataMapper {
                             posteAuth,
                             accountNumber,
                             String.valueOf(installmentData.getAmount()),
-                            POSTE_DOCUMENT_TYPE_CODE
+                            POSTE_DOCUMENT_TYPE_CODE,
+                            noticeCode
                     ) :
                         null
                 )
