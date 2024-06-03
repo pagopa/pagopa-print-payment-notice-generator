@@ -250,6 +250,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                             .data(aes256Utils.encrypt(objectMapper
                                     .writeValueAsString(noticeGenerationRequestItem)))
                             .createdAt(Instant.now())
+                            .numberOfAttempts(0)
                             .build();
             toSave.setErrorDescription(error);
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
