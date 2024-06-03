@@ -12,7 +12,7 @@
 
     <groupId>it.gov.pagopa</groupId>
     <artifactId>print-payment-notice-generator</artifactId>
-    <version>0.2.0-4-helm</version>
+    <version>0.2.1</version>
     <name>pagopa-print-payment-notice-generator</name>
     <description>PagoPA Print Payment Notices Generator</description>
 
