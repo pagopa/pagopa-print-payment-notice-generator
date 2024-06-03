@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-generator"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
-    tag: "0.2.0"
+    tag: "0.2.0-4-helm"
     pullPolicy: Always
   livenessProbe:
     httpGet:
@@ -86,6 +86,7 @@ microservice-chart:
     KAFKA_BROKER: "pagopa-d-itn-core-evh-meucci.servicebus.windows.net:9093"
     KAFKA_NOTICE_GENERATION_TOPIC: 'pagopa-printit-evh'
     KAFKA_NOTICE_COMPLETE_TOPIC: 'pagopa-printit-complete-evh'
+    KAFKA_NOTICE_ERROR_TOPIC: 'pagopa-printit-errors-evh'
     PDF_ENGINE_ENDPOINT: 'https://api.dev.platform.pagopa.it/printit/pdf-engine-node/v1/generate-pdf'
     REST_CLIENT_LOGGER_LEVEL: 'FULL'
   envSecret:
@@ -98,6 +99,7 @@ microservice-chart:
     NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
     KAFKA_SASL_JAAS_CONFIG: 'ehub-d-notice-jaas-config'
     NOTICE_COMPLETE_KAFKA_SASL_JAAS_CONFIG: 'ehub-d-notice-complete-jaas-config'
+    NOTICE_ERROR_KAFKA_SASL_JAAS_CONFIG: 'ehub-d-notice-errors-jaas-config'
     PDF_ENGINE_SUBKEY: 'pdf-engine-node-subkey'
     AES_SECRET_KEY: 'aes-key'
     AES_SALT: 'aes-salt'

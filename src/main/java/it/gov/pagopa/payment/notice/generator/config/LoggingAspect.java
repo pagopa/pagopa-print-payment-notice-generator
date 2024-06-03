@@ -16,12 +16,20 @@ import org.aspectj.lang.reflect.CodeSignature;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.env.AbstractEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MutablePropertySources;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.deNull;
 
@@ -57,6 +65,51 @@ public class LoggingAspect {
     @Value("${info.properties.environment}")
     private String environment;
 
+    private static String getDetail(ResponseEntity<ProblemJson> result) {
+        if(result != null && result.getBody() != null && result.getBody().getDetail() != null) {
+            return result.getBody().getDetail();
+        } else return AppError.UNKNOWN.getDetails();
+    }
+
+    private static String getTitle(ResponseEntity<ProblemJson> result) {
+        if(result != null && result.getBody() != null && result.getBody().getTitle() != null) {
+            return result.getBody().getTitle();
+        } else return AppError.UNKNOWN.getTitle();
+    }
+
+    public static String getExecutionTime() {
+        String startTime = MDC.get(START_TIME);
+        if(startTime != null) {
+            long endTime = System.currentTimeMillis();
+            long executionTime = endTime - Long.parseLong(startTime);
+            return String.valueOf(executionTime);
+        }
+        return "-";
+    }
+
+    private static Map<String, String> getParams(ProceedingJoinPoint joinPoint) {
+        CodeSignature codeSignature = (CodeSignature) joinPoint.getSignature();
+        Map<String, String> params = new HashMap<>();
+        int i = 0;
+        for (var paramName : codeSignature.getParameterNames()) {
+            params.put(paramName, deNull(joinPoint.getArgs()[i++]));
+        }
+        return params;
+    }
+
+    // TODO remove this
+    @EventListener
+    public void handleContextRefresh(ContextRefreshedEvent event) {
+        final Environment env = event.getApplicationContext().getEnvironment();
+        log.info("Active profiles: {}", Arrays.toString(env.getActiveProfiles()));
+        final MutablePropertySources sources = ((AbstractEnvironment) env).getPropertySources();
+        StreamSupport.stream(sources.spliterator(), false)
+                .filter(EnumerablePropertySource.class::isInstance)
+                .map(ps -> ((EnumerablePropertySource<?>) ps).getPropertyNames())
+                .flatMap(Arrays::stream)
+                .distinct()
+                .forEach(prop -> log.info("[env-context] {}: {}", prop, env.getProperty(prop)));
+    }
 
     @Pointcut("@within(org.springframework.web.bind.annotation.RestController)")
     public void restController() {
@@ -111,7 +164,7 @@ public class LoggingAspect {
     @AfterReturning(value = "execution(* *..exception.ErrorHandler.*(..))", returning = "result")
     public void trowingApiInvocation(JoinPoint joinPoint, ResponseEntity<ProblemJson> result) {
         MDC.put(STATUS, "KO");
-        MDC.put(CODE, String.valueOf(result.getStatusCodeValue()));
+        MDC.put(CODE, String.valueOf(result.getStatusCode()));
         MDC.put(RESPONSE_TIME, getExecutionTime());
         MDC.put(FAULT_CODE, getTitle(result));
         MDC.put(FAULT_DETAIL, getDetail(result));
@@ -126,37 +179,5 @@ public class LoggingAspect {
         Object result = joinPoint.proceed();
         log.debug("Return method {} - result: {}", joinPoint.getSignature().toShortString(), result);
         return result;
-    }
-
-    private static String getDetail(ResponseEntity<ProblemJson> result) {
-        if(result != null && result.getBody() != null && result.getBody().getDetail() != null) {
-            return result.getBody().getDetail();
-        } else return AppError.UNKNOWN.getDetails();
-    }
-
-    private static String getTitle(ResponseEntity<ProblemJson> result) {
-        if(result != null && result.getBody() != null && result.getBody().getTitle() != null) {
-            return result.getBody().getTitle();
-        } else return AppError.UNKNOWN.getTitle();
-    }
-
-    public static String getExecutionTime() {
-        String startTime = MDC.get(START_TIME);
-        if(startTime != null) {
-            long endTime = System.currentTimeMillis();
-            long executionTime = endTime - Long.parseLong(startTime);
-            return String.valueOf(executionTime);
-        }
-        return "-";
-    }
-
-    private static Map<String, String> getParams(ProceedingJoinPoint joinPoint) {
-        CodeSignature codeSignature = (CodeSignature) joinPoint.getSignature();
-        Map<String, String> params = new HashMap<>();
-        int i = 0;
-        for (var paramName : codeSignature.getParameterNames()) {
-            params.put(paramName, deNull(joinPoint.getArgs()[i++]));
-        }
-        return params;
     }
 }
