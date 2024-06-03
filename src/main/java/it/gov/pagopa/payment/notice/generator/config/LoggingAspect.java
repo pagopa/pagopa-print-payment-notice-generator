@@ -16,12 +16,20 @@ import org.aspectj.lang.reflect.CodeSignature;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.env.AbstractEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MutablePropertySources;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.deNull;
 
@@ -89,18 +97,19 @@ public class LoggingAspect {
         return params;
     }
 
-//    @EventListener
-//    public void handleContextRefresh(ContextRefreshedEvent event) {
-//        final Environment env = event.getApplicationContext().getEnvironment();
-//        log.info("Active profiles: {}", Arrays.toString(env.getActiveProfiles()));
-//        final MutablePropertySources sources = ((AbstractEnvironment) env).getPropertySources();
-//        StreamSupport.stream(sources.spliterator(), false)
-//                .filter(EnumerablePropertySource.class::isInstance)
-//                .map(ps -> ((EnumerablePropertySource<?>) ps).getPropertyNames())
-//                .flatMap(Arrays::stream)
-//                .distinct()
-//                .forEach(prop -> log.info("[env-context] {}: {}", prop, env.getProperty(prop)));
-//    }
+    // TODO remove this
+    @EventListener
+    public void handleContextRefresh(ContextRefreshedEvent event) {
+        final Environment env = event.getApplicationContext().getEnvironment();
+        log.info("Active profiles: {}", Arrays.toString(env.getActiveProfiles()));
+        final MutablePropertySources sources = ((AbstractEnvironment) env).getPropertySources();
+        StreamSupport.stream(sources.spliterator(), false)
+                .filter(EnumerablePropertySource.class::isInstance)
+                .map(ps -> ((EnumerablePropertySource<?>) ps).getPropertyNames())
+                .flatMap(Arrays::stream)
+                .distinct()
+                .forEach(prop -> log.info("[env-context] {}: {}", prop, env.getProperty(prop)));
+    }
 
     @Pointcut("@within(org.springframework.web.bind.annotation.RestController)")
     public void restController() {
