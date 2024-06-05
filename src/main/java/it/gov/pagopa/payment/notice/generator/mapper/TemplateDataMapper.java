@@ -108,15 +108,14 @@ public class TemplateDataMapper {
                                 .items(noticeRequestData.getNotice().getInstallments() != null ?
                                 noticeRequestData.getNotice().getInstallments().stream().map(item ->
                                         mapInstallment(
-                                                ciTaxCode,
                                                 cbill,
+                                                ciTaxCode,
                                                 debtorTaxCode,
                                                 fullName,
                                                 subject,
                                                 posteAccountNumber,
                                                 posteAuthCode,
-                                                item,
-                                                noticeCode
+                                                item
                                         )).toList() :
                                 Collections.emptyList()).build())
                         .build())
@@ -162,8 +161,7 @@ public class TemplateDataMapper {
     private static Installment mapInstallment(
             String cbill, String ciTaxCode, String debtorTaxCode,
             String fullname, String subject, String accountNumber,
-            String posteAuth, InstallmentData installmentData,
-            String noticeCode) {
+            String posteAuth, InstallmentData installmentData) {
         String amount = String.valueOf(installmentData.getAmount());
         return Installment.builder()
                 .refNumber(installmentData.getCode())
@@ -183,7 +181,7 @@ public class TemplateDataMapper {
                             accountNumber,
                             String.valueOf(installmentData.getAmount()),
                             POSTE_DOCUMENT_TYPE_CODE,
-                            noticeCode
+                            installmentData.getCode()
                     ) :
                         null
                 )
