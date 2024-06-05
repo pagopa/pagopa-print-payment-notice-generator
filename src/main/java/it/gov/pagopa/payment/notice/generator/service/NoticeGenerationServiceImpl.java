@@ -177,6 +177,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                             paymentNoticeGenerationRequest.getItems().size() +
                                     paymentNoticeGenerationRequest.getNumberOfElementsFailed() &&
                     paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
+                paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
                 noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
             }
 
