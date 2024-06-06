@@ -89,7 +89,6 @@ public class TemplateDataMapper {
                                 debtorTaxCode,
                                 fullName,
                                 subject,
-                                posteAuthCode,
                                 posteAccountNumber,
                                 noticeAmount,
                                 POSTE_DOCUMENT_TYPE_CODE,
@@ -123,12 +122,12 @@ public class TemplateDataMapper {
     }
 
     private static String generatePosteDataMatrix(
-            String ciTaxCode, String debtorTaxCode, String fullName, String subject, String authCode,
+            String ciTaxCode, String debtorTaxCode, String fullName, String subject,
             String posteAccountNumber, String amount, String posteTypeCode, String noticeCode
     ) {
         return String.join("",
                 "codfase=NBPA;",
-                generateCodeline(authCode, posteAccountNumber, amount, posteTypeCode),
+                generateCodeline(noticeCode, posteAccountNumber, amount, posteTypeCode),
                 "1P1",
                 StringUtils.rightPad(ciTaxCode, 11, " "),
                 StringUtils.rightPad(debtorTaxCode, 16, " "),
@@ -177,7 +176,6 @@ public class TemplateDataMapper {
                             debtorTaxCode,
                             fullname,
                             subject,
-                            posteAuth,
                             accountNumber,
                             String.valueOf(installmentData.getAmount()),
                             POSTE_DOCUMENT_TYPE_CODE,
