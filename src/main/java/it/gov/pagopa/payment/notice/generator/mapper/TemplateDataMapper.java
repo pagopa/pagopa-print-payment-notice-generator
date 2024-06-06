@@ -89,7 +89,6 @@ public class TemplateDataMapper {
                                 debtorTaxCode,
                                 fullName,
                                 subject,
-                                posteAuthCode,
                                 posteAccountNumber,
                                 noticeAmount,
                                 POSTE_DOCUMENT_TYPE_CODE,
@@ -123,7 +122,7 @@ public class TemplateDataMapper {
     }
 
     private static String generatePosteDataMatrix(
-            String ciTaxCode, String debtorTaxCode, String fullName, String subject, String authCode,
+            String ciTaxCode, String debtorTaxCode, String fullName, String subject,
             String posteAccountNumber, String amount, String posteTypeCode, String noticeCode
     ) {
         return String.join("",
@@ -177,7 +176,6 @@ public class TemplateDataMapper {
                             debtorTaxCode,
                             fullname,
                             subject,
-                            posteAuth,
                             accountNumber,
                             String.valueOf(installmentData.getAmount()),
                             POSTE_DOCUMENT_TYPE_CODE,
