@@ -128,7 +128,7 @@ public class TemplateDataMapper {
     ) {
         return String.join("",
                 "codfase=NBPA;",
-                generateCodeline(authCode, posteAccountNumber, amount, posteTypeCode),
+                generateCodeline(noticeCode, posteAccountNumber, amount, posteTypeCode),
                 "1P1",
                 StringUtils.rightPad(ciTaxCode, 11, " "),
                 StringUtils.rightPad(debtorTaxCode, 16, " "),
