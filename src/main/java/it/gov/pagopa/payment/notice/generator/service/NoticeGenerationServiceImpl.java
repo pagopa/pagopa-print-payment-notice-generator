@@ -162,7 +162,9 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         try (BufferedInputStream pdfStream = new BufferedInputStream(
                 new FileInputStream(pdfEngineResponse.getTempPdfPath()))) {
 
-            String blobName = String.format("%s-%s-%s", "pagopa-avviso",
+            String blobName = String.format("%s-%s-%s-%s-%s", "pagopa-avviso",
+                    noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode(),
+                    noticeGenerationRequestItem.getData().getDebtor().getTaxCode(),
                     noticeGenerationRequestItem.getData().getNotice().getCode(),
                     noticeGenerationRequestItem.getTemplateId());
             if(!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, blobName)) {
