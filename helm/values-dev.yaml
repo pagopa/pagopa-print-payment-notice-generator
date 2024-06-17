@@ -34,9 +34,9 @@ microservice-chart:
     servicePort: 8080
   serviceAccount:
     create: false
-    annotations: {}
+    annotations: { }
     name: ""
-  podAnnotations: {}
+  podAnnotations: { }
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -87,7 +87,7 @@ microservice-chart:
     KAFKA_NOTICE_GENERATION_TOPIC: 'pagopa-printit-evh'
     KAFKA_NOTICE_COMPLETE_TOPIC: 'pagopa-printit-complete-evh'
     KAFKA_NOTICE_ERROR_TOPIC: 'pagopa-printit-errors-evh'
-    PDF_ENGINE_ENDPOINT: 'https://api.dev.platform.pagopa.it/printit/pdf-engine-node/v1/generate-pdf'
+    PDF_ENGINE_ENDPOINT: 'https://api.dev.platform.pagopa.it/printit/pdf-engine/v1/generate-pdf'
     REST_CLIENT_LOGGER_LEVEL: 'FULL'
   envSecret:
     # required
@@ -106,8 +106,8 @@ microservice-chart:
   keyvault:
     name: "pagopa-d-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: {}
-  tolerations: []
+  nodeSelector: { }
+  tolerations: [ ]
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -134,5 +134,5 @@ microservice-chart:
         repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
         tag: "0.0.0"
         pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+      envConfig: { }
+      envSecret: { }
