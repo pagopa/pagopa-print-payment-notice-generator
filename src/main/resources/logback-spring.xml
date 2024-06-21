@@ -32,7 +32,7 @@
         </appender>
 
         <appender name="ECS_JSON_FILE" class="ch.qos.logback.core.FileAppender">
-            <file>./logs/${OTEL_SERVICE_NAME}.log</file>
+            <file>${OTEL_SERVICE_NAME}.log</file>
             <append>true</append>
             <encoder class="co.elastic.logging.logback.EcsEncoder">
                 <serviceName>${OTEL_SERVICE_NAME}</serviceName>
