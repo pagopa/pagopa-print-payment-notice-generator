@@ -16,6 +16,8 @@ import it.gov.pagopa.payment.notice.generator.model.TemplateResource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -137,6 +139,7 @@ public class NoticeTemplateStorageClient {
      *
      * @return template data
      */
+    @Cacheable(value = "getTemplates")
     public List<TemplateResource> getTemplates() {
 
         if(tableClient == null) {
@@ -157,6 +160,7 @@ public class NoticeTemplateStorageClient {
     }
 
     @Scheduled(cron = "${spring.cloud.azure.storage.blob.templates.cron}")
+    @CacheEvict(cacheNames = {"getTemplates"})
     protected void refreshTemplates() {
         File templateFiles = new File("temp/templates");
         if (templateFiles.exists()) {
