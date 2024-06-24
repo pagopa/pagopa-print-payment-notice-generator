@@ -2,6 +2,7 @@ package it.gov.pagopa.payment.notice.generator.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.schema.*;
 import it.gov.pagopa.payment.notice.generator.client.PdfEngineClient;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequestError;
@@ -12,6 +13,7 @@ import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.mapper.TemplateDataMapper;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
+import it.gov.pagopa.payment.notice.generator.model.TemplateResource;
 import it.gov.pagopa.payment.notice.generator.model.enums.PaymentGenerationRequestStatus;
 import it.gov.pagopa.payment.notice.generator.model.notice.CreditorInstitution;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineRequest;
@@ -22,6 +24,8 @@ import it.gov.pagopa.payment.notice.generator.storage.InstitutionsStorageClient;
 import it.gov.pagopa.payment.notice.generator.storage.NoticeStorageClient;
 import it.gov.pagopa.payment.notice.generator.storage.NoticeTemplateStorageClient;
 import it.gov.pagopa.payment.notice.generator.util.Aes256Utils;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +38,7 @@ import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Set;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
@@ -120,12 +125,28 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode());
             noticeGenerationRequestItem.getData().setCreditorInstitution(creditorInstitution);
 
+            String templateData = objectMapper.writeValueAsString(
+                    TemplateDataMapper.mapTemplate(noticeGenerationRequestItem.getData()));
+
+            TemplateResource templateResource = noticeTemplateStorageClient.
+                    getTemplates().stream().filter(item -> item.getTemplateId().equals(
+                            noticeGenerationRequestItem.getTemplateId())).findFirst().orElse(null);
+
+            if (templateResource != null && templateResource.getTemplateValidationRules() != null) {
+                JsonSchema jsonSchema = JsonSchemaFactory
+                        .getInstance(SpecVersion.VersionFlag.V7)
+                        .getSchema(templateResource.getTemplateValidationRules());
+                Set<ValidationMessage> validationMessageSet = jsonSchema.validate(templateData, InputFormat.JSON);
+                if (!validationMessageSet.isEmpty()) {
+                    throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(validationMessageSet));
+                }
+            }
+
             PdfEngineRequest request = new PdfEngineRequest();
 
             //Build the request
             request.setTemplate(templateFile.toURI().toURL());
-            request.setData(objectMapper.writeValueAsString(
-                    TemplateDataMapper.mapTemplate(noticeGenerationRequestItem.getData())));
+            request.setData(templateData);
             request.setApplySignature(false);
 
             PdfEngineResponse pdfEngineResponse = pdfEngineClient.generatePDF(request, tempDirectory);
@@ -207,8 +228,10 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             NoticeRequestEH noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
             log.info("Process a new Generation Request Event: {}", noticeRequestEH);
 
-            if(!validator.validate(noticeRequestEH).isEmpty()) {
-                throw new AppException(AppError.MESSAGE_VALIDATION_ERROR);
+            Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
+            if(!constraintValidators.isEmpty()) {
+                throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(
+                        constraintValidators.stream().map(ConstraintViolation::getMessage).toList()));
             }
 
             folderId = noticeRequestEH.getFolderId();

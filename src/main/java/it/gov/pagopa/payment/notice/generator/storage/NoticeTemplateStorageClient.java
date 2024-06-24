@@ -1,6 +1,9 @@
 package it.gov.pagopa.payment.notice.generator.storage;
 
 import com.azure.core.util.Context;
+import com.azure.data.tables.TableClient;
+import com.azure.data.tables.TableClientBuilder;
+import com.azure.data.tables.models.TableServiceException;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -9,6 +12,7 @@ import com.azure.storage.blob.models.DownloadRetryOptions;
 import com.azure.storage.blob.options.BlobDownloadToFileOptions;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
+import it.gov.pagopa.payment.notice.generator.model.TemplateResource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +27,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
@@ -31,6 +36,8 @@ import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.
 public class NoticeTemplateStorageClient {
 
     private BlobContainerClient blobContainerClient;
+
+    private TableClient tableClient;
 
     private Integer maxRetry;
 
@@ -41,11 +48,14 @@ public class NoticeTemplateStorageClient {
             @Value("${spring.cloud.azure.storage.blob.templates.enabled}") String enabled,
             @Value("${spring.cloud.azure.storage.blob.templates.connection_string}") String connectionString,
             @Value("${spring.cloud.azure.storage.blob.templates.containerName}") String containerName,
+            @Value("${spring.cloud.azure.storage.blob.templates.tableName}") String tableName,
             @Value("${spring.cloud.azure.storage.blob.templates.retry}") Integer maxRetry,
             @Value("${spring.cloud.azure.storage.blob.templates.timeout}") Integer timeout) {
         if (Boolean.TRUE.toString().equals(enabled)) {
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                     .connectionString(connectionString).buildClient();
+            tableClient = new TableClientBuilder().connectionString(connectionString)
+                    .tableName(tableName).buildClient();
             blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
             this.maxRetry = maxRetry;
             this.timeout = timeout;
@@ -53,9 +63,11 @@ public class NoticeTemplateStorageClient {
     }
     public NoticeTemplateStorageClient(
             Boolean enabled,
-            BlobContainerClient blobContainerClient) {
+            BlobContainerClient blobContainerClient,
+            TableClient tableClient) {
         if (Boolean.TRUE.equals(enabled)) {
              this.blobContainerClient = blobContainerClient;
+             this.tableClient = tableClient;
              this.maxRetry=3;
              this.timeout=10;
         }
@@ -119,7 +131,32 @@ public class NoticeTemplateStorageClient {
         }
     }
 
-    @Scheduled(cron = "${spring.cloud.azure.storage.blob.templates.timeout}")
+    /**
+     * Recovers the template list data available for notice generation from
+     * Azure Table Storage
+     *
+     * @return template data
+     */
+    public List<TemplateResource> getTemplates() {
+
+        if(tableClient == null) {
+            throw new AppException(AppError.TEMPLATE_CLIENT_UNAVAILABLE);
+        }
+
+        try {
+            return tableClient.listEntities().stream().map(item -> TemplateResource.builder()
+                    .templateId(String.valueOf(item.getProperty("templateId")))
+                    .description(String.valueOf(item.getProperty("description")))
+                    .templateExampleUrl(String.valueOf(item.getProperty("templateExampleUrl")))
+                    .templateValidationRules(String.valueOf(item.getProperty("templateValidationRules")))
+                    .build()).toList();
+        } catch (TableServiceException tableServiceException) {
+            throw new AppException(AppError.TEMPLATE_TABLE_CLIENT_ERROR, tableServiceException);
+        }
+
+    }
+
+    @Scheduled(cron = "${spring.cloud.azure.storage.blob.templates.cron}")
     protected void refreshTemplates() {
         File templateFiles = new File("temp/templates");
         if (templateFiles.exists()) {
