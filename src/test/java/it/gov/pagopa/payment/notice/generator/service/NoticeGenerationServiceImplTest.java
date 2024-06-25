@@ -433,10 +433,10 @@ class NoticeGenerationServiceImplTest {
         when(noticeTemplateStorageClient.getTemplates()).thenReturn(Collections.singletonList(
                 TemplateResource.builder().templateId("template").templateValidationRules(
                         "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"title\":\"Default notice validation schema\"," +
-                                "\"description\":\"Default validation schema\",\"required\":[\"debtor\",\"payee\",\"notice\"]," +
-                                "\"properties\":{\"debtor\":{\"type\":\"object\"},\"payee\":{\"type\":\"object\"}," +
-                                "\"notice\":{\"type\":\"object\",\"required\":[\"qrCode\"]," +
-                                "\"properties\":{\"qrCode\":{\"type\":\"string\"}}}}}").build()
+                                "\"description\":\"Default validation schema\",\"required\":[\"debtor\",\"creditorInstitution\",\"notice\"]," +
+                                "\"properties\":{\"debtor\":{\"type\":\"object\"},\"creditorInstitution\":{\"type\":\"object\"}," +
+                                "\"notice\":{\"type\":\"object\"" +
+                                "}}}}}").build()
         ));
         doReturn(CreditorInstitution.builder()
                 .webChannel(true)

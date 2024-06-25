@@ -32,14 +32,10 @@ public class Notice {
     @Schema(description = "Notice discounted amount to pay (used for example in discounted amount for infractions)")
     private Long discountedAmount;
 
-    @Schema(description = "Notice due date", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull
-    @NotEmpty
+    @Schema(description = "Notice due date", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String dueDate;
 
-    @Schema(description = "Notice code", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull
-    @NotEmpty
+    @Schema(description = "Notice code", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String code;
 
     @Schema(description = "Notice installments (if present)")

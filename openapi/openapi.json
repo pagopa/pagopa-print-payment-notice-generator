@@ -173,7 +173,7 @@
         "description" : "Notice installments (if present)"
       },
       "Notice" : {
-        "required" : [ "code", "dueDate", "paymentAmount", "subject" ],
+        "required" : [ "paymentAmount", "subject" ],
         "type" : "object",
         "properties" : {
           "code" : {
