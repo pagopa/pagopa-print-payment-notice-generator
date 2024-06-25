@@ -125,9 +125,6 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode());
             noticeGenerationRequestItem.getData().setCreditorInstitution(creditorInstitution);
 
-            String templateData = objectMapper.writeValueAsString(
-                    TemplateDataMapper.mapTemplate(noticeGenerationRequestItem.getData()));
-
             TemplateResource templateResource = noticeTemplateStorageClient.
                     getTemplates().stream().filter(item -> item.getTemplateId().equals(
                             noticeGenerationRequestItem.getTemplateId())).findFirst().orElse(null);
@@ -136,11 +133,16 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 JsonSchema jsonSchema = JsonSchemaFactory
                         .getInstance(SpecVersion.VersionFlag.V7)
                         .getSchema(templateResource.getTemplateValidationRules());
-                Set<ValidationMessage> validationMessageSet = jsonSchema.validate(templateData, InputFormat.JSON);
+                Set<ValidationMessage> validationMessageSet = jsonSchema.validate(
+                        objectMapper.writeValueAsString(noticeGenerationRequestItem.getData()), InputFormat.JSON);
                 if (!validationMessageSet.isEmpty()) {
-                    throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(validationMessageSet));
+                    throw new AppException(AppError.BAD_REQUEST, objectMapper.writeValueAsString(
+                            validationMessageSet.stream().map(ValidationMessage::getMessage).toList()));
                 }
             }
+
+            String templateData = objectMapper.writeValueAsString(
+                    TemplateDataMapper.mapTemplate(noticeGenerationRequestItem.getData()));
 
             PdfEngineRequest request = new PdfEngineRequest();
 
