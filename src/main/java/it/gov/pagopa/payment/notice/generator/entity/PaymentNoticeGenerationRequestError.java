@@ -37,4 +37,6 @@ public class PaymentNoticeGenerationRequestError {
 
     private Integer numberOfAttempts;
 
+    private boolean compressionError;
+
 }

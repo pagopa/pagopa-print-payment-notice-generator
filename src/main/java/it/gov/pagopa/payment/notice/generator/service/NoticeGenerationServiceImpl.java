@@ -250,6 +250,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                                 .data(message != null ? aes256Utils.encrypt(message) : "EMPTY")
                                 .createdAt(Instant.now())
                                 .numberOfAttempts(0)
+                                .compressionError(false)
                                 .build());
             } catch (Exception cryptException) {
                 log.error(
@@ -284,6 +285,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                                 .writeValueAsString(noticeGenerationRequestItem)))
                         .createdAt(Instant.now())
                         .numberOfAttempts(0)
+                        .compressionError(false)
                         .build();
                 paymentGenerationRequestRepository.findAndIncrementNumberOfElementsFailedById(folderId);
             }
