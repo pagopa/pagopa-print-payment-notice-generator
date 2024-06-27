@@ -111,6 +111,10 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         }
 
         Path tempDirectory;
+        String itemId = String.format("%s-%s-%s-%s", "pagopa-avviso",
+                noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode(),
+                noticeGenerationRequestItem.getData().getNotice().getCode(),
+                noticeGenerationRequestItem.getTemplateId());
 
         try {
 
@@ -161,9 +165,9 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             }
 
             if(folderId != null) {
-                addNoticeIntoFolder(noticeGenerationRequestItem, folderId, pdfEngineResponse);
+                addNoticeIntoFolder(noticeGenerationRequestItem, itemId, folderId, pdfEngineResponse);
                 if(errorId != null) {
-                    paymentGenerationRequestErrorRepository.deleteById(errorId);
+                    paymentGenerationRequestErrorRepository.deleteByErrorId(errorId);
                     paymentGenerationRequestRepository.findAndDecrementNumberOfElementsFailedById(folderId);
                 }
             }
@@ -173,7 +177,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             if(folderId != null) {
-                saveErrorEvent(errorId, folderId, noticeGenerationRequestItem, e.getMessage());
+                saveErrorEvent(errorId, itemId, folderId, noticeGenerationRequestItem, e.getMessage());
             }
             throw e;
         }
@@ -181,20 +185,16 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     }
 
     private void addNoticeIntoFolder(NoticeGenerationRequestItem noticeGenerationRequestItem,
-                                     String folderId, PdfEngineResponse pdfEngineResponse) {
+                                     String itemId, String folderId,
+                                     PdfEngineResponse pdfEngineResponse) {
         try (BufferedInputStream pdfStream = new BufferedInputStream(
                 new FileInputStream(pdfEngineResponse.getTempPdfPath()))) {
 
-            String blobName = String.format("%s-%s-%s-%s-%s", "pagopa-avviso",
-                    noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode(),
-                    noticeGenerationRequestItem.getData().getDebtor().getTaxCode(),
-                    noticeGenerationRequestItem.getData().getNotice().getCode(),
-                    noticeGenerationRequestItem.getTemplateId());
-            if(!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, blobName)) {
+            if(!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, itemId)) {
                 throw new RuntimeException("Encountered error during blob saving");
             }
 
-            paymentGenerationRequestRepository.findAndAddItemById(folderId, blobName);
+            paymentGenerationRequestRepository.findAndAddItemById(folderId, itemId);
             PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
                     paymentGenerationRequestRepository.findById(folderId).orElseThrow();
             if(paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING) &&
@@ -250,6 +250,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                                 .data(message != null ? aes256Utils.encrypt(message) : "EMPTY")
                                 .createdAt(Instant.now())
                                 .numberOfAttempts(0)
+                                .compressionError(false)
                                 .build());
             } catch (Exception cryptException) {
                 log.error(
@@ -265,31 +266,38 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     }
 
     private void saveErrorEvent(
-            String errorId, String folderId,
+            String errorId, String itemId, String folderId,
             NoticeGenerationRequestItem noticeGenerationRequestItem,
             String error) {
+
         try {
-            PaymentNoticeGenerationRequestError toSave = errorId != null ?
-                    paymentGenerationRequestErrorRepository.findById(errorId).orElseThrow() :
-                    PaymentNoticeGenerationRequestError.builder()
-                            .id(errorId)
-                            .errorDescription(error)
-                            .folderId(folderId)
-                            .data(aes256Utils.encrypt(objectMapper
-                                    .writeValueAsString(noticeGenerationRequestItem)))
-                            .createdAt(Instant.now())
-                            .numberOfAttempts(0)
-                            .build();
+
+            PaymentNoticeGenerationRequestError toSave =
+                    paymentGenerationRequestErrorRepository.findByErrorId(errorId != null ?
+                            errorId : itemId).orElse(null);
+
+            if (toSave == null) {
+                toSave = PaymentNoticeGenerationRequestError.builder()
+                        .errorId(itemId)
+                        .errorDescription(error)
+                        .folderId(folderId)
+                        .data(aes256Utils.encrypt(objectMapper
+                                .writeValueAsString(noticeGenerationRequestItem)))
+                        .createdAt(Instant.now())
+                        .numberOfAttempts(0)
+                        .compressionError(false)
+                        .build();
+                paymentGenerationRequestRepository.findAndIncrementNumberOfElementsFailedById(folderId);
+            }
             toSave.setErrorDescription(error);
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
                     paymentGenerationRequestErrorRepository.save(toSave);
-            paymentGenerationRequestRepository.findAndIncrementNumberOfElementsFailedById(folderId);
             noticeRequestErrorProducer.noticeError(paymentNoticeGenerationRequestError);
         } catch (Exception e) {
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
                     folderId,
-                    sanitizeLogParam(noticeGenerationRequestItem.getData().getNotice().getCode())
-
+                    sanitizeLogParam(noticeGenerationRequestItem.getData().getNotice().getCode()),
+                    e
             );
         }
     }

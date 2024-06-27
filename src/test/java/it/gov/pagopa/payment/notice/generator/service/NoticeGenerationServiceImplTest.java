@@ -292,6 +292,7 @@ class NoticeGenerationServiceImplTest {
             throw new Exception("Could not increment data");
         }).when(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
         doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
+        doReturn(Optional.empty()).when(paymentGenerationRequestErrorRepository).findByErrorId(any());
         doReturn(CreditorInstitution.builder()
                 .webChannel(true)
                 .physicalChannel("Test")
@@ -347,8 +348,8 @@ class NoticeGenerationServiceImplTest {
         verify(institutionsStorageClient).getInstitutionData(any());
         verify(noticeTemplateStorageClient).getTemplate(any());
         verify(pdfEngineClient).generatePDF(any(),any());
-        verify(paymentGenerationRequestErrorRepository).save(any());
         verify(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
+        verify(paymentGenerationRequestErrorRepository).findByErrorId(any());
         verifyNoInteractions(noticeStorageClient);
     }
 

@@ -12,7 +12,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(of = "folderId")
+@EqualsAndHashCode(of = "errorId")
 @Document("payment_notice_generation_request_error")
 @ToString
 public class PaymentNoticeGenerationRequestError {
@@ -22,6 +22,9 @@ public class PaymentNoticeGenerationRequestError {
 
     @Indexed()
     private String folderId;
+
+    @Indexed()
+    private String errorId;
 
     @CreatedDate
     private Instant createdAt;
@@ -33,5 +36,7 @@ public class PaymentNoticeGenerationRequestError {
     private String data;
 
     private Integer numberOfAttempts;
+
+    private boolean compressionError;
 
 }
