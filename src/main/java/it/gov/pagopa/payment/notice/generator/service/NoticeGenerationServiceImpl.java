@@ -295,7 +295,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             noticeRequestErrorProducer.noticeError(paymentNoticeGenerationRequestError);
         } catch (Exception e) {
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
-                    folderId,
+                    sanitizeLogParam(folderId),
                     sanitizeLogParam(noticeGenerationRequestItem.getData().getNotice().getCode()),
                     e
             );
