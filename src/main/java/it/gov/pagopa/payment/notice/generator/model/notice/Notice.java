@@ -21,16 +21,14 @@ public class Notice {
     @NotEmpty
     private String subject;
 
-    @Schema(description = "Notice total amount to pay", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull
-    @NotEmpty
+    @Schema(description = "Notice total amount to pay", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long paymentAmount;
 
     @Schema(description = "Notice reduced amount to pay (used for example in reduced amount for infractions)")
-    private Long reducedAmount;
+    private InstallmentData reduced;
 
     @Schema(description = "Notice discounted amount to pay (used for example in discounted amount for infractions)")
-    private Long discountedAmount;
+    private InstallmentData discounted;
 
     @Schema(description = "Notice due date", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String dueDate;

@@ -153,7 +153,7 @@
         "description" : "Debtor data"
       },
       "InstallmentData" : {
-        "required" : [ "amount", "code", "dueDate" ],
+        "required" : [ "amount", "code" ],
         "type" : "object",
         "properties" : {
           "amount" : {
@@ -162,6 +162,8 @@
             "format" : "int64"
           },
           "code" : {
+            "maxLength" : 18,
+            "minLength" : 18,
             "type" : "string",
             "description" : "Installment code"
           },
@@ -173,17 +175,15 @@
         "description" : "Notice installments (if present)"
       },
       "Notice" : {
-        "required" : [ "paymentAmount", "subject" ],
+        "required" : [ "subject" ],
         "type" : "object",
         "properties" : {
           "code" : {
             "type" : "string",
             "description" : "Notice code"
           },
-          "discountedAmount" : {
-            "type" : "integer",
-            "description" : "Notice discounted amount to pay (used for example in discounted amount for infractions)",
-            "format" : "int64"
+          "discounted" : {
+            "$ref" : "#/components/schemas/InstallmentData"
           },
           "dueDate" : {
             "type" : "string",
@@ -201,10 +201,8 @@
             "description" : "Notice total amount to pay",
             "format" : "int64"
           },
-          "reducedAmount" : {
-            "type" : "integer",
-            "description" : "Notice reduced amount to pay (used for example in reduced amount for infractions)",
-            "format" : "int64"
+          "reduced" : {
+            "$ref" : "#/components/schemas/InstallmentData"
           },
           "subject" : {
             "type" : "string",
