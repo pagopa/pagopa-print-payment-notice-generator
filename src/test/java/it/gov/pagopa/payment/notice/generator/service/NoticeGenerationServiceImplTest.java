@@ -8,6 +8,7 @@ import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestError
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
+import it.gov.pagopa.payment.notice.generator.model.TemplateResource;
 import it.gov.pagopa.payment.notice.generator.model.enums.PaymentGenerationRequestStatus;
 import it.gov.pagopa.payment.notice.generator.model.notice.*;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineResponse;
@@ -95,6 +96,7 @@ class NoticeGenerationServiceImplTest {
     public void init() {
         Mockito.reset(paymentGenerationRequestErrorRepository, paymentGenerationRequestRepository,
                 institutionsStorageClient, noticeStorageClient, noticeTemplateStorageClient, pdfEngineClient);
+        lenient().when(noticeTemplateStorageClient.getTemplates()).thenReturn(Collections.emptyList());
         noticeGenerationService = new NoticeGenerationServiceImpl(
                 paymentGenerationRequestRepository, paymentGenerationRequestErrorRepository,
                 institutionsStorageClient, noticeStorageClient, noticeTemplateStorageClient,
@@ -348,6 +350,156 @@ class NoticeGenerationServiceImplTest {
         verify(paymentGenerationRequestErrorRepository).save(any());
         verify(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
         verifyNoInteractions(noticeStorageClient);
+    }
+
+    @SneakyThrows
+    @Test
+    void processNoticeGenerationShouldReturnKOOnExtraValidation() {
+
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().build()))
+                .when(paymentGenerationRequestRepository).findById(any());
+        doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
+        doReturn(CreditorInstitution.builder()
+                .webChannel(true)
+                .physicalChannel("Test")
+                .fullName("Test")
+                .logo("logo")
+                .cbill("Cbill")
+                .organization("ORG")
+                .posteAccountNumber("131213")
+                .posteAuth("322323")
+                .build()
+        ).when(institutionsStorageClient).getInstitutionData(any());
+        when(noticeTemplateStorageClient.getTemplates()).thenReturn(Collections.singletonList(
+                TemplateResource.builder().templateId("template").templateValidationRules(
+                        "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"title\":\"Default notice validation schema\"," +
+                                "\"description\":\"Default validation schema\",\"required\":[\"extra\",\"debtor\",\"payee\",\"notice\"]," +
+                                "\"properties\":{\"debtor\":{\"type\":\"object\"},\"payee\":{\"type\":\"object\"}," +
+                                "\"notice\":{\"type\":\"object\",\"required\":[\"qrCode\"]," +
+                                "\"properties\":{\"qrCode\":{\"type\":\"string\"}}}}}").build()
+        ));
+
+        NoticeRequestEH noticeRequestEH = NoticeRequestEH
+                .builder()
+                .folderId("test")
+                .noticeData(NoticeGenerationRequestItem.builder()
+                        .templateId("template")
+                        .data(NoticeRequestData.builder()
+                                .notice(Notice.builder()
+                                        .code("code")
+                                        .dueDate("24/10/2024")
+                                        .subject("subject")
+                                        .paymentAmount(100L)
+                                        .installments(Collections.singletonList(
+                                                InstallmentData.builder()
+                                                        .amount(100L)
+                                                        .code("codeRate")
+                                                        .dueDate("24/10/2024")
+                                                        .build()
+                                        ))
+                                        .build())
+                                .creditorInstitution(CreditorInstitution.builder()
+                                        .taxCode("taxCode")
+                                        .build())
+                                .debtor(Debtor.builder()
+                                        .taxCode("taxCode")
+                                        .address("address")
+                                        .city("city")
+                                        .buildingNumber("101")
+                                        .postalCode("00135")
+                                        .province("RM")
+                                        .fullName("Test Name")
+                                        .build())
+                                .build())
+                        .build())
+                .build();
+        Assert.assertThrows(AppException.class, () ->
+                noticeGenerationService.processNoticeGenerationEH(
+                        objectMapper.writeValueAsString(noticeRequestEH)));
+        verify(paymentGenerationRequestRepository).findById(any());
+        verify(institutionsStorageClient).getInstitutionData(any());
+        verify(noticeTemplateStorageClient).getTemplate(any());
+        verify(paymentGenerationRequestErrorRepository).save(any());
+        verify(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
+        verifyNoInteractions(noticeStorageClient);
+        verifyNoInteractions(pdfEngineClient);
+    }
+
+    @SneakyThrows
+    @Test
+    void processNoticeGenerationShouldReturnOkOnValidDataWithExtraValidation() {
+
+        doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
+        when(noticeTemplateStorageClient.getTemplates()).thenReturn(Collections.singletonList(
+                TemplateResource.builder().templateId("template").templateValidationRules(
+                        "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"title\":\"Default notice validation schema\"," +
+                                "\"description\":\"Default validation schema\",\"required\":[\"debtor\",\"creditorInstitution\",\"notice\"]," +
+                                "\"properties\":{\"debtor\":{\"type\":\"object\"},\"creditorInstitution\":{\"type\":\"object\"}," +
+                                "\"notice\":{\"type\":\"object\"" +
+                                "}}}}}").build()
+        ));
+        doReturn(CreditorInstitution.builder()
+                .webChannel(true)
+                .physicalChannel("Test")
+                .fullName("Test")
+                .logo("logo")
+                .cbill("Cbill")
+                .organization("ORG")
+                .build()
+        ).when(institutionsStorageClient).getInstitutionData(any());
+        doReturn(getPdfEngineResponse(HttpStatus.SC_OK, noticeFile.getPath()))
+                .when(pdfEngineClient).generatePDF(any(), any());
+        doReturn(true).when(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
+        doReturn(1L).when(paymentGenerationRequestRepository).findAndAddItemById(any(),any());
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.PROCESSING)
+                .numberOfElementsTotal(1).numberOfElementsFailed(0)
+                .items(Collections.singletonList("test")).build())).when(paymentGenerationRequestRepository)
+                .findById(any());
+        doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete(any());
+
+        NoticeRequestEH noticeRequestEH = NoticeRequestEH
+                .builder()
+                .folderId("test")
+                .noticeData(NoticeGenerationRequestItem.builder()
+                        .templateId("template")
+                        .data(NoticeRequestData.builder()
+                                .notice(Notice.builder()
+                                        .code("code")
+                                        .dueDate("24/10/2024")
+                                        .subject("subject")
+                                        .paymentAmount(100L)
+                                        .reducedAmount(80L)
+                                        .discountedAmount(60L)
+                                        .installments(Collections.singletonList(
+                                                InstallmentData.builder()
+                                                        .amount(100L)
+                                                        .code("codeRate")
+                                                        .dueDate("24/10/2024")
+                                                        .build()
+                                        ))
+                                        .build())
+                                .creditorInstitution(CreditorInstitution.builder()
+                                        .taxCode("taxCode")
+                                        .build())
+                                .debtor(Debtor.builder()
+                                        .taxCode("taxCode")
+                                        .address("address")
+                                        .city("city")
+                                        .buildingNumber("101")
+                                        .postalCode("00135")
+                                        .province("RM")
+                                        .fullName("Test Name")
+                                        .build())
+                                .build())
+                        .build())
+                .build();
+        noticeGenerationService.processNoticeGenerationEH(objectMapper.writeValueAsString(noticeRequestEH));
+        verify(paymentGenerationRequestRepository).findAndAddItemById(any(), any());
+        verify(noticeStorageClient).savePdfToBlobStorage(any(),any(),any());
+        verify(institutionsStorageClient).getInstitutionData(any());
+        verify(noticeTemplateStorageClient).getTemplate(any());
+        verify(pdfEngineClient).generatePDF(any(),any());
+        verifyNoInteractions(paymentGenerationRequestErrorRepository);
     }
 
     private PdfEngineResponse getPdfEngineResponse(int status, String pdfPath) {
