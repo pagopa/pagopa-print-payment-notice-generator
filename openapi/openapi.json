@@ -1,250 +1,282 @@
 {
-  "openapi" : "3.0.1",
-  "info" : {
-    "description" : "PagoPA Print Payment Notices Generator",
-    "termsOfService" : "https://www.pagopa.gov.it/",
-    "title" : "pagopa-print-payment-notice-generator",
-    "version" : "0.2.9"
+  "openapi": "3.0.1",
+  "info": {
+    "description": "PagoPA Print Payment Notices Generator",
+    "termsOfService": "https://www.pagopa.gov.it/",
+    "title": "pagopa-print-payment-notice-generator",
+    "version": "0.2.10"
   },
-  "servers" : [ {
-    "url" : "http://localhost",
-    "description" : "Generated server url"
-  } ],
-  "paths" : {
-    "/notices/generate" : {
-      "parameters" : [ {
-        "description" : "This header identifies the call, if not passed it is self-generated. This ID is returned in the response.",
-        "in" : "header",
-        "name" : "X-Request-Id",
-        "schema" : {
-          "type" : "string"
-        }
-      } ],
-      "post" : {
-        "operationId" : "generateNotice",
-        "parameters" : [ {
-          "in" : "query",
-          "name" : "folderId",
-          "required" : false,
-          "schema" : {
-            "type" : "string"
+  "servers": [
+    {
+      "url": "http://localhost",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/notices/generate": {
+      "parameters": [
+        {
+          "description": "This header identifies the call, if not passed it is self-generated. This ID is returned in the response.",
+          "in": "header",
+          "name": "X-Request-Id",
+          "schema": {
+            "type": "string"
           }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/NoticeGenerationRequestItem"
+        }
+      ],
+      "post": {
+        "operationId": "generateNotice",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "folderId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoticeGenerationRequestItem"
               }
             }
           },
-          "required" : true
+          "required": true
         },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "string",
-                  "format" : "binary"
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             },
-            "description" : "OK",
-            "headers" : {
-              "X-Request-Id" : {
-                "description" : "This header identifies the call",
-                "schema" : {
-                  "type" : "string"
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "This header identifies the call",
+                "schema": {
+                  "type": "string"
                 }
               }
             }
           }
         },
-        "tags" : [ "Notice Generation APIs" ]
+        "tags": [
+          "Notice Generation APIs"
+        ]
       }
     }
   },
-  "components" : {
-    "schemas" : {
-      "CreditorInstitution" : {
-        "required" : [ "appChannel", "taxCode", "webChannel" ],
-        "type" : "object",
-        "properties" : {
-          "appChannel" : {
-            "type" : "boolean",
-            "description" : "Boolean to refer if it has a app channel"
+  "components": {
+    "schemas": {
+      "CreditorInstitution": {
+        "required": [
+          "appChannel",
+          "taxCode",
+          "webChannel"
+        ],
+        "type": "object",
+        "properties": {
+          "appChannel": {
+            "type": "boolean",
+            "description": "Boolean to refer if it has a app channel"
           },
-          "cbill" : {
-            "type" : "string",
-            "description" : "CI cbill"
+          "cbill": {
+            "type": "string",
+            "description": "CI cbill"
           },
-          "fullName" : {
-            "type" : "string",
-            "description" : "CI full name"
+          "fullName": {
+            "type": "string",
+            "description": "CI full name"
           },
-          "info" : {
-            "type" : "string",
-            "description" : "CI info"
+          "info": {
+            "type": "string",
+            "description": "CI info"
           },
-          "logo" : {
-            "type" : "string"
+          "logo": {
+            "type": "string"
           },
-          "organization" : {
-            "type" : "string",
-            "description" : "CI Organization"
+          "organization": {
+            "type": "string",
+            "description": "CI Organization"
           },
-          "physicalChannel" : {
-            "type" : "string",
-            "description" : "CI physical channel data"
+          "physicalChannel": {
+            "type": "string",
+            "description": "CI physical channel data"
           },
-          "posteAccountNumber" : {
-            "type" : "string",
-            "description" : "Poste account number"
+          "posteAccountNumber": {
+            "type": "string",
+            "description": "Poste account number"
           },
-          "posteAuth" : {
-            "type" : "string",
-            "description" : "Installment poste auth code"
+          "posteAuth": {
+            "type": "string",
+            "description": "Installment poste auth code"
           },
-          "taxCode" : {
-            "type" : "string",
-            "description" : "CI tax code"
+          "taxCode": {
+            "type": "string",
+            "description": "CI tax code"
           },
-          "webChannel" : {
-            "type" : "boolean",
-            "description" : "Boolean to refer if it has a web channel"
+          "webChannel": {
+            "type": "boolean",
+            "description": "Boolean to refer if it has a web channel"
           }
         },
-        "description" : "Creditor Institution data"
+        "description": "Creditor Institution data"
       },
-      "Debtor" : {
-        "required" : [ "address", "buildingNumber", "city", "fullName", "postalCode", "province" ],
-        "type" : "object",
-        "properties" : {
-          "address" : {
-            "type" : "string",
-            "description" : "Debtor address"
+      "Debtor": {
+        "required": [
+          "address",
+          "buildingNumber",
+          "city",
+          "fullName",
+          "postalCode",
+          "province"
+        ],
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Debtor address"
           },
-          "buildingNumber" : {
-            "type" : "string",
-            "description" : "Debtor building number"
+          "buildingNumber": {
+            "type": "string",
+            "description": "Debtor building number"
           },
-          "city" : {
-            "type" : "string",
-            "description" : "Debtor city"
+          "city": {
+            "type": "string",
+            "description": "Debtor city"
           },
-          "fullName" : {
-            "type" : "string",
-            "description" : "Debtor full name"
+          "fullName": {
+            "type": "string",
+            "description": "Debtor full name"
           },
-          "postalCode" : {
-            "type" : "string",
-            "description" : "Debtor postal code"
+          "postalCode": {
+            "type": "string",
+            "description": "Debtor postal code"
           },
-          "province" : {
-            "type" : "string",
-            "description" : "Debtor province"
+          "province": {
+            "type": "string",
+            "description": "Debtor province"
           },
-          "taxCode" : {
-            "type" : "string",
-            "description" : "Debtor taxCode"
+          "taxCode": {
+            "type": "string",
+            "description": "Debtor taxCode"
           }
         },
-        "description" : "Debtor data"
+        "description": "Debtor data"
       },
-      "InstallmentData" : {
-        "required" : [ "amount", "code" ],
-        "type" : "object",
-        "properties" : {
-          "amount" : {
-            "type" : "integer",
-            "description" : "Installment amount",
-            "format" : "int64"
+      "InstallmentData": {
+        "required": [
+          "amount",
+          "code",
+          "dueDate"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "description": "Installment amount",
+            "format": "int64"
           },
-          "code" : {
-            "maxLength" : 18,
-            "minLength" : 18,
-            "type" : "string",
-            "description" : "Installment code"
+          "code": {
+            "type": "string",
+            "description": "Installment code"
           },
-          "dueDate" : {
-            "type" : "string",
-            "description" : "Installment dueDate"
+          "dueDate": {
+            "type": "string",
+            "description": "Installment dueDate"
           }
         },
-        "description" : "Notice installments (if present)"
+        "description": "Notice installments (if present)"
       },
-      "Notice" : {
-        "required" : [ "subject" ],
-        "type" : "object",
-        "properties" : {
-          "code" : {
-            "type" : "string",
-            "description" : "Notice code"
+      "Notice": {
+        "required": [
+          "paymentAmount",
+          "subject"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Notice code"
           },
-          "discounted" : {
-            "$ref" : "#/components/schemas/InstallmentData"
+          "discountedAmount": {
+            "type": "integer",
+            "description": "Notice discounted amount to pay (used for example in discounted amount for infractions)",
+            "format": "int64"
           },
-          "dueDate" : {
-            "type" : "string",
-            "description" : "Notice due date"
+          "dueDate": {
+            "type": "string",
+            "description": "Notice due date"
           },
-          "installments" : {
-            "type" : "array",
-            "description" : "Notice installments (if present)",
-            "items" : {
-              "$ref" : "#/components/schemas/InstallmentData"
+          "installments": {
+            "type": "array",
+            "description": "Notice installments (if present)",
+            "items": {
+              "$ref": "#/components/schemas/InstallmentData"
             }
           },
-          "paymentAmount" : {
-            "type" : "integer",
-            "description" : "Notice total amount to pay",
-            "format" : "int64"
+          "paymentAmount": {
+            "type": "integer",
+            "description": "Notice total amount to pay",
+            "format": "int64"
           },
-          "reduced" : {
-            "$ref" : "#/components/schemas/InstallmentData"
+          "reducedAmount": {
+            "type": "integer",
+            "description": "Notice reduced amount to pay (used for example in reduced amount for infractions)",
+            "format": "int64"
           },
-          "subject" : {
-            "type" : "string",
-            "description" : "Notice subject"
+          "subject": {
+            "type": "string",
+            "description": "Notice subject"
           }
         },
-        "description" : "Notice data"
+        "description": "Notice data"
       },
-      "NoticeGenerationRequestItem" : {
-        "type" : "object",
-        "properties" : {
-          "data" : {
-            "$ref" : "#/components/schemas/NoticeRequestData"
+      "NoticeGenerationRequestItem": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/NoticeRequestData"
           },
-          "templateId" : {
-            "type" : "string"
+          "templateId": {
+            "type": "string"
           }
         },
-        "description" : "templateId to use for retrieval"
+        "description": "templateId to use for retrieval"
       },
-      "NoticeRequestData" : {
-        "required" : [ "creditorInstitution", "debtor", "notice" ],
-        "type" : "object",
-        "properties" : {
-          "creditorInstitution" : {
-            "$ref" : "#/components/schemas/CreditorInstitution"
+      "NoticeRequestData": {
+        "required": [
+          "creditorInstitution",
+          "debtor",
+          "notice"
+        ],
+        "type": "object",
+        "properties": {
+          "creditorInstitution": {
+            "$ref": "#/components/schemas/CreditorInstitution"
           },
-          "debtor" : {
-            "$ref" : "#/components/schemas/Debtor"
+          "debtor": {
+            "$ref": "#/components/schemas/Debtor"
           },
-          "notice" : {
-            "$ref" : "#/components/schemas/Notice"
+          "notice": {
+            "$ref": "#/components/schemas/Notice"
           }
         }
       }
     },
-    "securitySchemes" : {
-      "ApiKey" : {
-        "description" : "The API key to access this function app.",
-        "in" : "header",
-        "name" : "Ocp-Apim-Subscription-Key",
-        "type" : "apiKey"
+    "securitySchemes": {
+      "ApiKey": {
+        "description": "The API key to access this function app.",
+        "in": "header",
+        "name": "Ocp-Apim-Subscription-Key",
+        "type": "apiKey"
       }
     }
   }
