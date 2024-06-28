@@ -34,9 +34,9 @@ microservice-chart:
     servicePort: 8080
   serviceAccount:
     create: false
-    annotations: {}
+    annotations: { }
     name: ""
-  podAnnotations: {}
+  podAnnotations: { }
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -85,7 +85,7 @@ microservice-chart:
     OTEL_METRICS_EXPORTER: otlp
     OTEL_LOGS_EXPORTER: none
     OTEL_TRACES_SAMPLER: "always_on"
-    KAFKA_BROKER: "pagopa-d-itn-core-evh-meucci.servicebus.windows.net:9093"
+    KAFKA_BROKER: "pagopa-d-itn-printit-evh.servicebus.windows.net:9093"
     KAFKA_NOTICE_GENERATION_TOPIC: 'pagopa-printit-evh'
     KAFKA_NOTICE_COMPLETE_TOPIC: 'pagopa-printit-complete-evh'
     KAFKA_NOTICE_ERROR_TOPIC: 'pagopa-printit-errors-evh'
@@ -108,8 +108,8 @@ microservice-chart:
   keyvault:
     name: "pagopa-d-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: {}
-  tolerations: []
+  nodeSelector: { }
+  tolerations: [ ]
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -136,5 +136,5 @@ microservice-chart:
         repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
         tag: "0.0.0"
         pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+      envConfig: { }
+      envSecret: { }
