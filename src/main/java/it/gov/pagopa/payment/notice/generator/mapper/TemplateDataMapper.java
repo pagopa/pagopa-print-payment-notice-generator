@@ -30,8 +30,8 @@ public class TemplateDataMapper {
         String cbill = noticeRequestData.getCreditorInstitution().getCbill();
         String ciTaxCode = noticeRequestData.getCreditorInstitution().getTaxCode();
         String noticeAmount = String.valueOf(noticeRequestData.getNotice().getPaymentAmount());
-        Long reduceAmount = noticeRequestData.getNotice().getReducedAmount();
-        Long discountedAmount = noticeRequestData.getNotice().getDiscountedAmount();
+        InstallmentData reduced = noticeRequestData.getNotice().getReduced();
+        InstallmentData discounted = noticeRequestData.getNotice().getDiscounted();
         String debtorTaxCode = noticeRequestData.getDebtor().getTaxCode();
         String fullName = noticeRequestData.getDebtor().getFullName();
         String subject = noticeRequestData.getNotice().getSubject();
@@ -95,15 +95,30 @@ public class TemplateDataMapper {
                                 noticeCode
                         ) : null)
                         .instalments(Installments.builder()
-                                .reduced(InstallmentReduced.builder().amount(
-                                        reduceAmount != null ? currencyFormat(
-                                                String.valueOf(reduceAmount)) : null)
-                                        .build())
-                                .discounted(InstallmentDiscounted.builder().amount(
-                                        discountedAmount != null ? currencyFormat(
-                                                String.valueOf(discountedAmount)) :
-                                                null
-                                        ).build())
+                                .reduced(
+                                    reduced != null ? mapInstallment(
+                                        cbill,
+                                        ciTaxCode,
+                                        debtorTaxCode,
+                                        fullName,
+                                        subject,
+                                        posteAccountNumber,
+                                        posteAuthCode,
+                                        reduced
+                                    ) : null
+                                )
+                                .discounted(
+                                    discounted != null ? mapInstallment(
+                                            cbill,
+                                            ciTaxCode,
+                                            debtorTaxCode,
+                                            fullName,
+                                            subject,
+                                            posteAccountNumber,
+                                            posteAuthCode,
+                                            discounted
+                                    ) : null
+                                )
                                 .items(noticeRequestData.getNotice().getInstallments() != null ?
                                 noticeRequestData.getNotice().getInstallments().stream().map(item ->
                                         mapInstallment(

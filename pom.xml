@@ -12,7 +12,7 @@
 
     <groupId>it.gov.pagopa</groupId>
     <artifactId>print-payment-notice-generator</artifactId>
-    <version>0.2.9</version>
+    <version>0.2.15</version>
     <name>pagopa-print-payment-notice-generator</name>
     <description>PagoPA Print Payment Notices Generator</description>
 
@@ -66,6 +66,10 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-data-tables</artifactId>
         </dependency>
 
         <!-- Start HttpClient -->
@@ -126,6 +130,11 @@
             <groupId>org.modelmapper</groupId>
             <artifactId>modelmapper</artifactId>
             <version>3.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.4.2</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

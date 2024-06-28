@@ -4,7 +4,7 @@
     "description": "PagoPA Print Payment Notices Generator",
     "termsOfService": "https://www.pagopa.gov.it/",
     "title": "pagopa-print-payment-notice-generator",
-    "version": "0.2.9"
+    "version": "0.2.15"
   },
   "servers": [
     {
@@ -174,8 +174,7 @@
       "InstallmentData": {
         "required": [
           "amount",
-          "code",
-          "dueDate"
+          "code"
         ],
         "type": "object",
         "properties": {
@@ -185,6 +184,8 @@
             "format": "int64"
           },
           "code": {
+            "maxLength": 18,
+            "minLength": 18,
             "type": "string",
             "description": "Installment code"
           },
@@ -197,9 +198,6 @@
       },
       "Notice": {
         "required": [
-          "code",
-          "dueDate",
-          "paymentAmount",
           "subject"
         ],
         "type": "object",
@@ -208,10 +206,8 @@
             "type": "string",
             "description": "Notice code"
           },
-          "discountedAmount": {
-            "type": "integer",
-            "description": "Notice discounted amount to pay (used for example in discounted amount for infractions)",
-            "format": "int64"
+          "discounted": {
+            "$ref": "#/components/schemas/InstallmentData"
           },
           "dueDate": {
             "type": "string",
@@ -229,10 +225,8 @@
             "description": "Notice total amount to pay",
             "format": "int64"
           },
-          "reducedAmount": {
-            "type": "integer",
-            "description": "Notice reduced amount to pay (used for example in reduced amount for infractions)",
-            "format": "int64"
+          "reduced": {
+            "$ref": "#/components/schemas/InstallmentData"
           },
           "subject": {
             "type": "string",
