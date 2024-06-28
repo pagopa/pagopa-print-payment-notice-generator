@@ -15,8 +15,8 @@ public class Installments {
 
     private List<Installment> items;
 
-    private InstallmentDiscounted discounted;
+    private Installment discounted;
 
-    private InstallmentReduced reduced;
+    private Installment reduced;
 
 }
