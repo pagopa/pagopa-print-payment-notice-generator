@@ -55,23 +55,28 @@ microservice-chart:
         mountPath: /logs
   resources:
     requests:
-      memory: "512Mi"
+      memory: "1Gi"
       cpu: "0.25"
     limits:
-      memory: "512Mi"
+      memory: "1Gi"
       cpu: "0.25"
   autoscaling:
     enable: true
     minReplica: 3
     maxReplica: 10
-    pollingInterval: 10 # seconds
-    cooldownPeriod: 50 # seconds
+    pollingInterval: 30 # seconds
+    cooldownPeriod: 300 # seconds
     triggers:
       - type: cpu
         metadata:
           # Required
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
+      - type: memory
+        metadata:
+          # Required
+          type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
+          value: "70"
   envConfig:
     WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-prod'

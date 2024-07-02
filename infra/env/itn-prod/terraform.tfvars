@@ -12,4 +12,4 @@ tags = {
 
 apim_dns_zone_prefix = "platform"
 external_domain      = "pagopa.it"
-hostname             = "itnprod.printit.internal.platform.pagopa.it"
+hostname             = "printit.itn.internal.platform.pagopa.it"
