@@ -302,7 +302,7 @@ class NoticeGenerationServiceImplTest {
             throw new Exception("Could not increment data");
         }).when(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
         doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
-        doReturn(Optional.empty()).when(paymentGenerationRequestErrorRepository).findByErrorId(any());
+        doReturn(Optional.empty()).when(paymentGenerationRequestErrorRepository).findByErrorIdAndFolderId(any(),any());
         doReturn(CreditorInstitution.builder()
                 .webChannel(true)
                 .physicalChannel("Test")
@@ -359,7 +359,7 @@ class NoticeGenerationServiceImplTest {
         verify(noticeTemplateStorageClient).getTemplate(any());
         verify(pdfEngineClient).generatePDF(any(),any());
         verify(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
-        verify(paymentGenerationRequestErrorRepository).findByErrorId(any());
+        verify(paymentGenerationRequestErrorRepository).findByErrorIdAndFolderId(any(),any());
         verifyNoInteractions(noticeStorageClient);
     }
 
