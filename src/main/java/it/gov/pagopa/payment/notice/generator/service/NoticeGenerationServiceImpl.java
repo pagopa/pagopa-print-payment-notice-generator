@@ -167,7 +167,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             if(folderId != null) {
                 addNoticeIntoFolder(noticeGenerationRequestItem, itemId, folderId, pdfEngineResponse);
                 if(errorId != null) {
-                    paymentGenerationRequestErrorRepository.deleteByErrorId(errorId);
+                    paymentGenerationRequestErrorRepository.deleteByErrorIdAndFolderId(errorId, folderId);
                     paymentGenerationRequestRepository.findAndDecrementNumberOfElementsFailedById(folderId);
                 }
             }
@@ -273,8 +273,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         try {
 
             PaymentNoticeGenerationRequestError toSave =
-                    paymentGenerationRequestErrorRepository.findByErrorId(errorId != null ?
-                            errorId : itemId).orElse(null);
+                    paymentGenerationRequestErrorRepository.findByErrorIdAndFolderId(errorId != null ?
+                            errorId : itemId, folderId).orElse(null);
 
             if (toSave == null) {
                 toSave = PaymentNoticeGenerationRequestError.builder()

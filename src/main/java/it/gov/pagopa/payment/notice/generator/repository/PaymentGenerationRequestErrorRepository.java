@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface PaymentGenerationRequestErrorRepository
         extends MongoRepository<PaymentNoticeGenerationRequestError, String> {
 
-    void deleteByErrorId(String errorId);
+    void deleteByErrorIdAndFolderId(String errorId, String folderId);
 
-    Optional<PaymentNoticeGenerationRequestError> findByErrorId(String errorId);
+    Optional<PaymentNoticeGenerationRequestError> findByErrorIdAndFolderId(String errorId, String folderId);
 }
