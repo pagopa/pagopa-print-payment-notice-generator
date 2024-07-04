@@ -17,10 +17,11 @@ import java.util.Objects;
  */
 public class TemplateDataMapper {
 
-    private static String POSTE_DOCUMENT_TYPE_CODE = "896";
+    private static final String POSTE_DOCUMENT_TYPE_CODE = "896";
 
     /**
      * Map notice generation dat
+     *
      * @param noticeRequestData request data
      * @return mapped notice data
      */
@@ -45,10 +46,10 @@ public class TemplateDataMapper {
                         .taxCode(ciTaxCode)
                         .name(noticeRequestData.getCreditorInstitution().getFullName())
                         .channel(Channel.builder().online(
-                                Online.builder()
-                                        .website(Objects.requireNonNullElse(noticeRequestData.getCreditorInstitution().getWebChannel(), false))
-                                        .app(Objects.requireNonNullElse(noticeRequestData.getCreditorInstitution().getAppChannel(), false))
-                                        .build())
+                                        Online.builder()
+                                                .website(Objects.requireNonNullElse(noticeRequestData.getCreditorInstitution().getWebChannel(), false))
+                                                .app(Objects.requireNonNullElse(noticeRequestData.getCreditorInstitution().getAppChannel(), false))
+                                                .build())
                                 .physical(Physical.builder()
                                         .data(noticeRequestData.getCreditorInstitution().getPhysicalChannel())
                                         .build())
@@ -75,8 +76,8 @@ public class TemplateDataMapper {
                         .cbillCode(cbill)
                         .qrCode(noticeAmount != null ?
                                 generateQrCode(noticeCode,
-                                ciTaxCode,
-                                noticeAmount) : null
+                                        ciTaxCode,
+                                        noticeAmount) : null
                         )
                         .subject(noticeRequestData.getNotice().getSubject())
                         .amount(noticeAmount != null ? currencyFormat(noticeAmount) : null)
@@ -86,43 +87,18 @@ public class TemplateDataMapper {
                         .expiryDate(noticeRequestData.getNotice().getDueDate())
                         .posteDataMatrix(posteAuthCode != null ?
                                 generatePosteDataMatrix(
-                                ciTaxCode,
-                                debtorTaxCode,
-                                fullName,
-                                subject,
-                                posteAccountNumber,
-                                noticeAmount,
-                                POSTE_DOCUMENT_TYPE_CODE,
-                                noticeCode
-                        ) : null)
-                        .instalments(Installments.builder()
-                                .reduced(
-                                    reduced != null ? mapInstallment(
-                                        cbill,
                                         ciTaxCode,
                                         debtorTaxCode,
                                         fullName,
                                         subject,
                                         posteAccountNumber,
-                                        posteAuthCode,
-                                        reduced
-                                    ) : null
-                                )
-                                .discounted(
-                                    discounted != null ? mapInstallment(
-                                            cbill,
-                                            ciTaxCode,
-                                            debtorTaxCode,
-                                            fullName,
-                                            subject,
-                                            posteAccountNumber,
-                                            posteAuthCode,
-                                            discounted
-                                    ) : null
-                                )
-                                .items(noticeRequestData.getNotice().getInstallments() != null ?
-                                noticeRequestData.getNotice().getInstallments().stream().map(item ->
-                                        mapInstallment(
+                                        noticeAmount,
+                                        POSTE_DOCUMENT_TYPE_CODE,
+                                        noticeCode
+                                ) : null)
+                        .instalments(Installments.builder()
+                                .reduced(
+                                        reduced != null ? mapInstallment(
                                                 cbill,
                                                 ciTaxCode,
                                                 debtorTaxCode,
@@ -130,9 +106,34 @@ public class TemplateDataMapper {
                                                 subject,
                                                 posteAccountNumber,
                                                 posteAuthCode,
-                                                item
-                                        )).toList() :
-                                Collections.emptyList()).build())
+                                                reduced
+                                        ) : null
+                                )
+                                .discounted(
+                                        discounted != null ? mapInstallment(
+                                                cbill,
+                                                ciTaxCode,
+                                                debtorTaxCode,
+                                                fullName,
+                                                subject,
+                                                posteAccountNumber,
+                                                posteAuthCode,
+                                                discounted
+                                        ) : null
+                                )
+                                .items(noticeRequestData.getNotice().getInstallments() != null ?
+                                        noticeRequestData.getNotice().getInstallments().stream().map(item ->
+                                                mapInstallment(
+                                                        cbill,
+                                                        ciTaxCode,
+                                                        debtorTaxCode,
+                                                        fullName,
+                                                        subject,
+                                                        posteAccountNumber,
+                                                        posteAuthCode,
+                                                        item
+                                                )).toList() :
+                                        Collections.emptyList()).build())
                         .build())
                 .build();
     }
@@ -155,7 +156,7 @@ public class TemplateDataMapper {
 
     private static String generateCodeline(String noticeCode, String posteAccountNumber,
                                            String amount, String posteTypeCode) {
-        return String.join("","18",
+        return String.join("", "18",
                 StringUtils.leftPad(noticeCode, 18, "0"),
                 "12",
                 StringUtils.leftPad(posteAccountNumber, 12, "0"),
@@ -166,7 +167,7 @@ public class TemplateDataMapper {
 
     private static String generateQrCode(String code, String taxCode, String amount) {
         return String.join("|",
-                "PAGOPA","002",
+                "PAGOPA", "002",
                 StringUtils.leftPad(code, 18, "0"),
                 StringUtils.leftPad(taxCode, 11, "0"),
                 amount
@@ -187,16 +188,16 @@ public class TemplateDataMapper {
                 .posteDocumentType(POSTE_DOCUMENT_TYPE_CODE)
                 .posteAuth(posteAuth)
                 .posteDataMatrix(posteAuth != null ?
-                    generatePosteDataMatrix(
-                            ciTaxCode,
-                            debtorTaxCode,
-                            fullname,
-                            subject,
-                            accountNumber,
-                            String.valueOf(installmentData.getAmount()),
-                            POSTE_DOCUMENT_TYPE_CODE,
-                            installmentData.getCode()
-                    ) :
+                        generatePosteDataMatrix(
+                                ciTaxCode,
+                                debtorTaxCode,
+                                fullname,
+                                subject,
+                                accountNumber,
+                                String.valueOf(installmentData.getAmount()),
+                                POSTE_DOCUMENT_TYPE_CODE,
+                                installmentData.getCode()
+                        ) :
                         null
                 )
                 .build();
