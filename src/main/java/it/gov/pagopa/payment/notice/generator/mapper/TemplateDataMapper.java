@@ -72,13 +72,13 @@ public class TemplateDataMapper {
                 .notice(Notice.builder()
                         .refNumber(noticeCode)
                         .cbillCode(cbill)
-                        .qrCode(
+                        .qrCode(noticeAmount != null ?
                                 generateQrCode(noticeCode,
                                 ciTaxCode,
-                                noticeAmount)
+                                noticeAmount) : null
                         )
                         .subject(noticeRequestData.getNotice().getSubject())
-                        .amount(currencyFormat(noticeAmount))
+                        .amount(noticeAmount != null ? currencyFormat(noticeAmount) : null)
                         .posteAuth(posteAuthCode)
                         .posteAccountNumber(posteAccountNumber)
                         .posteDocumentType(POSTE_DOCUMENT_TYPE_CODE)
