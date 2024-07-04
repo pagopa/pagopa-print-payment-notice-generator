@@ -29,7 +29,8 @@ public class TemplateDataMapper {
         String noticeCode = noticeRequestData.getNotice().getCode();
         String cbill = noticeRequestData.getCreditorInstitution().getCbill();
         String ciTaxCode = noticeRequestData.getCreditorInstitution().getTaxCode();
-        String noticeAmount = String.valueOf(noticeRequestData.getNotice().getPaymentAmount());
+        String noticeAmount = noticeRequestData.getNotice().getPaymentAmount() != null ?
+                String.valueOf(noticeRequestData.getNotice().getPaymentAmount()) : null;
         InstallmentData reduced = noticeRequestData.getNotice().getReduced();
         InstallmentData discounted = noticeRequestData.getNotice().getDiscounted();
         String debtorTaxCode = noticeRequestData.getDebtor().getTaxCode();
