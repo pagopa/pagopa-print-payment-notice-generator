@@ -34,9 +34,9 @@ microservice-chart:
     servicePort: 8080
   serviceAccount:
     create: false
-    annotations: {}
+    annotations: { }
     name: ""
-  podAnnotations: {}
+  podAnnotations: { }
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -58,12 +58,12 @@ microservice-chart:
       memory: "512Mi"
       cpu: "0.25"
     limits:
-      memory: "512Mi"
-      cpu: "0.25"
+      memory: "728Mi"
+      cpu: "0.8"
   autoscaling:
     enable: true
-    minReplica: 1
-    maxReplica: 1
+    minReplica: 3
+    maxReplica: 10
     pollingInterval: 30 # seconds
     cooldownPeriod: 300 # seconds
     triggers:
@@ -72,6 +72,11 @@ microservice-chart:
           # Required
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
+      - type: memory
+        metadata:
+          # Required
+          type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
+          value: "70"
   envConfig:
     WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-uat'
@@ -108,8 +113,8 @@ microservice-chart:
   keyvault:
     name: "pagopa-u-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: {}
-  tolerations: []
+  nodeSelector: { }
+  tolerations: [ ]
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -136,5 +141,5 @@ microservice-chart:
         repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
         tag: "0.0.0"
         pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+      envConfig: { }
+      envSecret: { }
