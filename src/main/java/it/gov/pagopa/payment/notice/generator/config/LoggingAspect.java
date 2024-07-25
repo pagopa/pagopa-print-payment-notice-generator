@@ -14,22 +14,13 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.CodeSignature;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
-import org.springframework.core.env.AbstractEnvironment;
-import org.springframework.core.env.EnumerablePropertySource;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.MutablePropertySources;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.StreamSupport;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.deNull;
 
@@ -50,11 +41,9 @@ public class LoggingAspect {
     public static final String OPERATION_ID = "operationId";
     public static final String ARGS = "args";
 
-    @Autowired
-    HttpServletRequest httRequest;
+    final HttpServletRequest httRequest;
 
-    @Autowired
-    HttpServletResponse httpResponse;
+    final HttpServletResponse httpResponse;
 
     @Value("${info.application.name}")
     private String name;
@@ -65,21 +54,26 @@ public class LoggingAspect {
     @Value("${info.properties.environment}")
     private String environment;
 
+    public LoggingAspect(HttpServletRequest httRequest, HttpServletResponse httpResponse) {
+        this.httRequest = httRequest;
+        this.httpResponse = httpResponse;
+    }
+
     private static String getDetail(ResponseEntity<ProblemJson> result) {
-        if(result != null && result.getBody() != null && result.getBody().getDetail() != null) {
+        if (result != null && result.getBody() != null && result.getBody().getDetail() != null) {
             return result.getBody().getDetail();
         } else return AppError.UNKNOWN.getDetails();
     }
 
     private static String getTitle(ResponseEntity<ProblemJson> result) {
-        if(result != null && result.getBody() != null && result.getBody().getTitle() != null) {
+        if (result != null && result.getBody() != null && result.getBody().getTitle() != null) {
             return result.getBody().getTitle();
         } else return AppError.UNKNOWN.getTitle();
     }
 
     public static String getExecutionTime() {
         String startTime = MDC.get(START_TIME);
-        if(startTime != null) {
+        if (startTime != null) {
             long endTime = System.currentTimeMillis();
             long executionTime = endTime - Long.parseLong(startTime);
             return String.valueOf(executionTime);
@@ -95,20 +89,6 @@ public class LoggingAspect {
             params.put(paramName, deNull(joinPoint.getArgs()[i++]));
         }
         return params;
-    }
-
-    // TODO remove this
-    @EventListener
-    public void handleContextRefresh(ContextRefreshedEvent event) {
-        final Environment env = event.getApplicationContext().getEnvironment();
-        log.info("Active profiles: {}", Arrays.toString(env.getActiveProfiles()));
-        final MutablePropertySources sources = ((AbstractEnvironment) env).getPropertySources();
-        StreamSupport.stream(sources.spliterator(), false)
-                .filter(EnumerablePropertySource.class::isInstance)
-                .map(ps -> ((EnumerablePropertySource<?>) ps).getPropertyNames())
-                .flatMap(Arrays::stream)
-                .distinct()
-                .forEach(prop -> log.info("[env-context] {}: {}", prop, env.getProperty(prop)));
     }
 
     @Pointcut("@within(org.springframework.web.bind.annotation.RestController)")
@@ -139,7 +119,7 @@ public class LoggingAspect {
         MDC.put(METHOD, joinPoint.getSignature().getName());
         MDC.put(START_TIME, String.valueOf(System.currentTimeMillis()));
         MDC.put(OPERATION_ID, UUID.randomUUID().toString());
-        if(MDC.get(REQUEST_ID) == null) {
+        if (MDC.get(REQUEST_ID) == null) {
             var requestId = UUID.randomUUID().toString();
             MDC.put(REQUEST_ID, requestId);
         }
@@ -164,7 +144,7 @@ public class LoggingAspect {
     @AfterReturning(value = "execution(* *..exception.ErrorHandler.*(..))", returning = "result")
     public void trowingApiInvocation(JoinPoint joinPoint, ResponseEntity<ProblemJson> result) {
         MDC.put(STATUS, "KO");
-        MDC.put(CODE, String.valueOf(result.getStatusCode()));
+        MDC.put(CODE, String.valueOf(result.getStatusCode().value()));
         MDC.put(RESPONSE_TIME, getExecutionTime());
         MDC.put(FAULT_CODE, getTitle(result));
         MDC.put(FAULT_DETAIL, getDetail(result));
