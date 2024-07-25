@@ -22,7 +22,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -63,15 +62,16 @@ public class NoticeTemplateStorageClient {
             this.timeout = timeout;
         }
     }
+
     public NoticeTemplateStorageClient(
             Boolean enabled,
             BlobContainerClient blobContainerClient,
             TableClient tableClient) {
         if (Boolean.TRUE.equals(enabled)) {
-             this.blobContainerClient = blobContainerClient;
-             this.tableClient = tableClient;
-             this.maxRetry=3;
-             this.timeout=10;
+            this.blobContainerClient = blobContainerClient;
+            this.tableClient = tableClient;
+            this.maxRetry = 3;
+            this.timeout = 10;
         }
     }
 
@@ -117,12 +117,12 @@ public class NoticeTemplateStorageClient {
     private String createTemplatesDirectory(String templateId) {
         try {
             Path workingDirectory = createWorkingDirectory().toPath().normalize().toAbsolutePath();
-            File templatesDirectory = new File(workingDirectory+"/templates");
+            File templatesDirectory = new File(workingDirectory + "/templates");
             if (!templatesDirectory.exists()) {
                 Files.createDirectory(templatesDirectory.toPath());
             }
             Path filePath = workingDirectory.resolve(
-                    "templates/"+templateId + ".zip").normalize().toAbsolutePath();
+                    "templates/" + templateId + ".zip").normalize().toAbsolutePath();
 
             if (!filePath.startsWith(workingDirectory + File.separator)) {
                 throw new IllegalArgumentException("Invalid filename");
@@ -142,17 +142,19 @@ public class NoticeTemplateStorageClient {
     @Cacheable(value = "getTemplates")
     public List<TemplateResource> getTemplates() {
 
-        if(tableClient == null) {
+        if (tableClient == null) {
             throw new AppException(AppError.TEMPLATE_CLIENT_UNAVAILABLE);
         }
 
         try {
-            return tableClient.listEntities().stream().map(item -> TemplateResource.builder()
-                    .templateId(String.valueOf(item.getProperty("templateId")))
-                    .description(String.valueOf(item.getProperty("description")))
-                    .templateExampleUrl(String.valueOf(item.getProperty("templateExampleUrl")))
-                    .templateValidationRules(String.valueOf(item.getProperty("templateValidationRules")))
-                    .build()).toList();
+            return tableClient.listEntities().stream()
+                    .map(item -> TemplateResource.builder()
+                            .templateId(String.valueOf(item.getProperty("templateId")))
+                            .description(String.valueOf(item.getProperty("description")))
+                            .templateExampleUrl(String.valueOf(item.getProperty("templateExampleUrl")))
+                            .templateValidationRules(String.valueOf(item.getProperty("templateValidationRules")))
+                            .build())
+                    .toList();
         } catch (TableServiceException tableServiceException) {
             throw new AppException(AppError.TEMPLATE_TABLE_CLIENT_ERROR, tableServiceException);
         }

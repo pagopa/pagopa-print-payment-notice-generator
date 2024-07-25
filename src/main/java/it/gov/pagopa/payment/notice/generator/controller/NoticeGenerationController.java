@@ -42,26 +42,22 @@ public class NoticeGenerationController {
     /**
      * POST method to generate a single notice, if a folderId is provided the content will be saved inside the provided
      * folder
-     * @param folderId optional parameter to use if the content generates has to be saved
+     *
+     * @param folderId                    optional parameter to use if the content generates has to be saved
      * @param noticeGenerationRequestItem data containing notice generation request
      * @return generated pdf
      */
     @PostMapping("/generate")
-    public ResponseEntity<Resource> generateNotice(
-            @RequestParam(value = "folderId", required = false) String folderId,
-            @Parameter(description = "templateId to use for retrieval")
-            @Valid @NotNull @RequestBody NoticeGenerationRequestItem noticeGenerationRequestItem) {
+    public ResponseEntity<Resource> generateNotice(@RequestParam(value = "folderId", required = false) String folderId, @Parameter(description = "templateId to use for retrieval") @Valid @NotNull @RequestBody NoticeGenerationRequestItem noticeGenerationRequestItem) {
         File file = noticeGenerationService.generateNotice(noticeGenerationRequestItem, folderId, null);
         try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file))) {
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"");
-            return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .headers(headers)
-                    .body(new ByteArrayResource(inputStream.readAllBytes()));
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).headers(headers).body(new ByteArrayResource(inputStream.readAllBytes()));
         } catch (Exception e) {
             throw new AppException(AppError.INTERNAL_SERVER_ERROR, e);
         } finally {
-            clearTempDirectory(file.toPath().getParent());
+            if (file != null) clearTempDirectory(file.toPath().getParent());
         }
     }
 

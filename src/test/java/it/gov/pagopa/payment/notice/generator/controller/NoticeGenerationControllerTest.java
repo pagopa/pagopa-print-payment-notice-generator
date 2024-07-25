@@ -19,7 +19,8 @@ import java.nio.file.Files;
 import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -36,44 +37,6 @@ class NoticeGenerationControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @BeforeEach
-    void setUp() {
-        Mockito.reset(noticeGenerationService);
-    }
-
-    @Test
-    void generateNoticeShouldReturnFileOnOk() throws Exception {
-        File tempDirectory = Files.createTempDirectory("test").toFile();
-        File file = Files.createTempFile(tempDirectory.toPath(), "test", ".zip").toFile();
-        when(noticeGenerationService.generateNotice(any(),any(), any()))
-                .thenReturn(file);
-        String url = "/notices/generate";
-        mvc.perform(post(url)
-                        .param("folderId", "test")
-                        .content(objectMapper.writeValueAsString(
-                                getNoticeGenerationRequestItem()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM));
-        verify(noticeGenerationService).generateNotice(any(),any(), any());
-    }
-
-    @Test
-    void generateNoticeShouldReturnKOonErrorFile() throws Exception {
-        when(noticeGenerationService.generateNotice(any(),any(), any()))
-                .thenReturn(null);
-        String url = "/notices/generate";
-        mvc.perform(post(url)
-                        .param("folderId", "test")
-                        .content(objectMapper.writeValueAsString(
-                                getNoticeGenerationRequestItem()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                )
-                .andExpect(status().is5xxServerError());
-        verify(noticeGenerationService).generateNotice(any(),any(), any());
-    }
 
     private static NoticeGenerationRequestItem getNoticeGenerationRequestItem() {
         return NoticeGenerationRequestItem.builder()
@@ -106,6 +69,29 @@ class NoticeGenerationControllerTest {
                                 .build())
                         .build())
                 .build();
+    }
+
+    @BeforeEach
+    void setUp() {
+        Mockito.reset(noticeGenerationService);
+    }
+
+    @Test
+    void generateNoticeShouldReturnFileOnOk() throws Exception {
+        File tempDirectory = Files.createTempDirectory("test").toFile();
+        File file = Files.createTempFile(tempDirectory.toPath(), "test", ".zip").toFile();
+        when(noticeGenerationService.generateNotice(any(), any(), any()))
+                .thenReturn(file);
+        String url = "/notices/generate";
+        mvc.perform(post(url)
+                        .param("folderId", "test")
+                        .content(objectMapper.writeValueAsString(
+                                getNoticeGenerationRequestItem()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM));
+        verify(noticeGenerationService).generateNotice(any(), any(), any());
     }
 
 

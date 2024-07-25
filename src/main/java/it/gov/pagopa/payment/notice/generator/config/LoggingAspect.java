@@ -61,7 +61,7 @@ public class LoggingAspect {
 
     private static String getDetail(ResponseEntity<ProblemJson> result) {
         if (result != null && result.getBody() != null && result.getBody().getDetail() != null) {
-            return result.getBody().getDetail();
+            return result.getBody().getDetail().substring(0, 200);
         } else return AppError.UNKNOWN.getDetails();
     }
 
