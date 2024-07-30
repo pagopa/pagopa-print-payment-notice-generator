@@ -4,13 +4,52 @@
     "description" : "PagoPA Print Payment Notices Generator",
     "termsOfService" : "https://www.pagopa.gov.it/",
     "title" : "pagopa-print-payment-notice-generator",
-    "version" : "0.3.5"
+    "version" : "0.3.6"
   },
   "servers" : [ {
     "url" : "http://localhost",
     "description" : "Generated server url"
   } ],
   "paths" : {
+    "/info" : {
+      "get" : {
+        "description" : "Return OK if application is started",
+        "operationId" : "healthCheck",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AppInfo"
+                }
+              }
+            },
+            "description" : "OK",
+            "headers" : {
+              "X-Request-Id" : {
+                "description" : "This header identifies the call",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "JWT" : [ ]
+        } ],
+        "summary" : "health check",
+        "tags" : [ "Home" ]
+      },
+      "parameters" : [ {
+        "description" : "This header identifies the call, if not passed it is self-generated. This ID is returned in the response.",
+        "in" : "header",
+        "name" : "X-Request-Id",
+        "schema" : {
+          "type" : "string"
+        }
+      } ]
+    },
     "/notices/generate" : {
       "parameters" : [ {
         "description" : "This header identifies the call, if not passed it is self-generated. This ID is returned in the response.",
@@ -67,6 +106,20 @@
   },
   "components" : {
     "schemas" : {
+      "AppInfo" : {
+        "type" : "object",
+        "properties" : {
+          "environment" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          }
+        }
+      },
       "CreditorInstitution" : {
         "required" : [ "appChannel", "taxCode", "webChannel" ],
         "type" : "object",
