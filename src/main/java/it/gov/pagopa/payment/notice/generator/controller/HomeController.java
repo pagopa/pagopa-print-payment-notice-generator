@@ -42,7 +42,7 @@ public class HomeController {
         return new RedirectView(basePath + "swagger-ui.html");
     }
 
-    @Operation(summary = "health check", description = "Return OK if application is started", security = {@SecurityRequirement(name = "JWT")}, tags = {"Home"})
+    @Operation(summary = "health check", description = "Return OK if application is started", security = {@SecurityRequirement(name = "ApiKey")}, tags = {"Home"})
     @GetMapping(value = "/info")
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<AppInfo> healthCheck() {
