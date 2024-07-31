@@ -28,6 +28,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedInputStream;
@@ -39,6 +40,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
+import static it.gov.pagopa.payment.notice.generator.config.LoggingAspect.METHOD;
+import static it.gov.pagopa.payment.notice.generator.config.LoggingAspect.STATUS;
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
@@ -151,14 +154,15 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 if (errorId != null) {
                     paymentGenerationRequestErrorRepository.deleteByErrorIdAndFolderId(errorId, folderId);
                     paymentGenerationRequestRepository.findAndDecrementNumberOfElementsFailedById(folderId);
+                    log.info("Recovered Generation Event: {}", errorId);
                 }
             }
 
             return new File(pdfEngineResponse.getTempPdfPath());
 
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
             if (folderId != null) {
+                log.info("Failed Generation Event: {}", e.getMessage(), e);
                 saveErrorEvent(errorId, itemId, folderId, noticeGenerationRequestItem, e.getMessage());
             }
             throw new AppException(AppError.INTERNAL_SERVER_ERROR, e);
@@ -221,6 +225,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                             paymentNoticeGenerationRequest.getItems().size() +
                                     paymentNoticeGenerationRequest.getNumberOfElementsFailed() &&
                     paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
+                log.info("Massive Request COMPLETING: {}", folderId);
                 paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
                 noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
             }
@@ -238,19 +243,24 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
      */
     @Override
     public void processNoticeGenerationEH(String message) {
-
+        MDC.clear();
+        MDC.put(METHOD, "processNoticeGenerationEH");
+        MDC.put(STATUS, "KO");
 
         String folderId = null;
         NoticeGenerationRequestItem noticeGenerationRequestItem = null;
         String errorId = null;
+        NoticeRequestEH noticeRequestEH = null;
 
         try {
 
-            NoticeRequestEH noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
+            noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
+            MDC.put("folderId", noticeRequestEH.getFolderId());
             log.info("Process a new Generation Request Event: {}", noticeRequestEH);
 
             Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
             if (!constraintValidators.isEmpty()) {
+                log.error("Failed Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
                 throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(
                         constraintValidators.stream().map(ConstraintViolation::getMessage).toList()));
             }
@@ -260,8 +270,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             errorId = noticeRequestEH.getErrorId();
 
         } catch (JsonProcessingException e) {
-            log.error(e.getMessage(), e);
             try {
+                log.info("Failed Generation Event: {}", e.getMessage(), e);
                 paymentGenerationRequestErrorRepository.save(
                         PaymentNoticeGenerationRequestError.builder()
                                 .errorDescription("Unable to read EH message content")
@@ -272,14 +282,19 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                                 .compressionError(false)
                                 .build());
             } catch (Exception cryptException) {
-                log.error(
-                        "Unable to save unparsable data to error"
-                );
+                log.error("Exception Generation Event: Unable to save unparsable data to error", cryptException);
             }
         }
 
-        if (noticeGenerationRequestItem != null && folderId != null) {
-            generateNotice(noticeGenerationRequestItem, folderId, errorId);
+        try {
+            if (noticeGenerationRequestItem != null && folderId != null) {
+                generateNotice(noticeGenerationRequestItem, folderId, errorId);
+                MDC.put(STATUS, "OK");
+                log.info("Success Generation Event: {}", noticeRequestEH);
+            }
+        } catch (Exception e) {
+            log.error("Exception Generation Event: {}", e.getMessage(), e);
+            throw e;
         }
 
     }
