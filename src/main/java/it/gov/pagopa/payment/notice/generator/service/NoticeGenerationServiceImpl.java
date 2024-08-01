@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Set;
 
 import static it.gov.pagopa.payment.notice.generator.config.LoggingAspect.METHOD;
-import static it.gov.pagopa.payment.notice.generator.config.LoggingAspect.STATUS;
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
@@ -116,6 +115,9 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode(),
                 noticeGenerationRequestItem.getData().getNotice().getCode(),
                 noticeGenerationRequestItem.getTemplateId());
+        MDC.put("itemId", itemId);
+        log.info("Process a new Generation Event: {}", noticeGenerationRequestItem);
+
 
         try {
 
@@ -154,7 +156,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 if (errorId != null) {
                     paymentGenerationRequestErrorRepository.deleteByErrorIdAndFolderId(errorId, folderId);
                     paymentGenerationRequestRepository.findAndDecrementNumberOfElementsFailedById(folderId);
-                    log.info("Recovered Generation Event: {}", errorId);
+                    log.info("Recovered Generation Event - errorId: {}", errorId);
                 }
             }
 
@@ -162,7 +164,6 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
         } catch (Exception e) {
             if (folderId != null) {
-                log.info("Failed Generation Event: {}", e.getMessage(), e);
                 saveErrorEvent(errorId, itemId, folderId, noticeGenerationRequestItem, e.getMessage());
             }
             throw new AppException(AppError.INTERNAL_SERVER_ERROR, e);
@@ -218,16 +219,16 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             }
 
             paymentGenerationRequestRepository.findAndAddItemById(folderId, itemId);
-            PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
-                    paymentGenerationRequestRepository.findById(folderId).orElseThrow();
-            if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING) &&
-                    paymentNoticeGenerationRequest.getNumberOfElementsTotal() <=
-                            paymentNoticeGenerationRequest.getItems().size() +
-                                    paymentNoticeGenerationRequest.getNumberOfElementsFailed() &&
-                    paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
-                log.info("Massive Request COMPLETING: {}", folderId);
+            var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId)
+                    .orElseThrow();
+
+            if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING)
+                    && paymentNoticeGenerationRequest.getNumberOfElementsTotal()
+                    <= paymentNoticeGenerationRequest.getItems().size() + paymentNoticeGenerationRequest.getNumberOfElementsFailed()
+                    && paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
                 paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
                 noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
+                log.info("Massive Request COMPLETING: {}", folderId);
             }
 
         } catch (Exception e) {
@@ -245,7 +246,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     public void processNoticeGenerationEH(String message) {
         MDC.clear();
         MDC.put(METHOD, "processNoticeGenerationEH");
-        MDC.put(STATUS, "KO");
+
 
         String folderId = null;
         NoticeGenerationRequestItem noticeGenerationRequestItem = null;
@@ -256,11 +257,11 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
             MDC.put("folderId", noticeRequestEH.getFolderId());
-            log.info("Process a new Generation Request Event: {}", noticeRequestEH);
+            log.info("Pre-Process a new Generation Request Event: {}", noticeRequestEH);
 
             Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
             if (!constraintValidators.isEmpty()) {
-                log.error("Failed Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
+                log.error("Exception Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
                 throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(
                         constraintValidators.stream().map(ConstraintViolation::getMessage).toList()));
             }
@@ -271,7 +272,6 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
         } catch (JsonProcessingException e) {
             try {
-                log.info("Failed Generation Event: {}", e.getMessage(), e);
                 paymentGenerationRequestErrorRepository.save(
                         PaymentNoticeGenerationRequestError.builder()
                                 .errorDescription("Unable to read EH message content")
@@ -281,6 +281,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                                 .numberOfAttempts(0)
                                 .compressionError(false)
                                 .build());
+                log.info("Failed Generation Event: {}", e.getMessage(), e);
             } catch (Exception cryptException) {
                 log.error("Exception Generation Event: Unable to save unparsable data to error", cryptException);
             }
@@ -289,7 +290,6 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         try {
             if (noticeGenerationRequestItem != null && folderId != null) {
                 generateNotice(noticeGenerationRequestItem, folderId, errorId);
-                MDC.put(STATUS, "OK");
                 log.info("Success Generation Event: {}", noticeRequestEH);
             }
         } catch (Exception e) {
@@ -327,6 +327,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
                     paymentGenerationRequestErrorRepository.save(toSave);
             noticeRequestErrorProducer.noticeError(paymentNoticeGenerationRequestError);
+            log.info("Failed Generation Event: {}", toSave);
         } catch (Exception e) {
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
                     sanitizeLogParam(folderId),
