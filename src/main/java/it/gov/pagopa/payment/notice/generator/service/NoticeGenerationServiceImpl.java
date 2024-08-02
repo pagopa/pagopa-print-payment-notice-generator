@@ -27,7 +27,6 @@ import it.gov.pagopa.payment.notice.generator.util.Aes256Utils;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
-import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.apache.http.HttpStatus;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
@@ -253,7 +252,6 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
      * @param message content to use for generation process
      */
     @Override
-    @SchedulerLock(name = "processNoticeGenerationEH", lockAtMostFor = "10m", lockAtLeastFor = "10s")
     public void processNoticeGenerationEH(String message) {
         MDC.clear();
 
