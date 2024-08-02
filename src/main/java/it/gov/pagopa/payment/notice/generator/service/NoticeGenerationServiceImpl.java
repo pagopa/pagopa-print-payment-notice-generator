@@ -40,7 +40,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
-import static it.gov.pagopa.payment.notice.generator.config.LoggingAspect.METHOD;
+import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.getMessageId;
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
@@ -255,7 +255,6 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     @Override
     public void processNoticeGenerationEH(String message) {
         MDC.clear();
-        MDC.put(METHOD, "processNoticeGenerationEH");
 
 
         String folderId = null;
@@ -267,6 +266,11 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
             MDC.put("folderId", noticeRequestEH.getFolderId());
+            MDC.put("topic", "generation");
+            MDC.put("messageId", getMessageId(noticeRequestEH));
+            log.info("Received Generation Message: notice {}", getMessageId(noticeRequestEH));
+            MDC.remove("topic");
+
             log.info("Pre-Process a new Generation Request Event: {}", noticeRequestEH);
 
             Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
