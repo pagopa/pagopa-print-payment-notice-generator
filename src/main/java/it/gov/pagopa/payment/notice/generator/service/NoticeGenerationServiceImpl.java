@@ -116,8 +116,9 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 noticeGenerationRequestItem.getData().getNotice().getCode(),
                 noticeGenerationRequestItem.getTemplateId());
         MDC.put("itemId", itemId);
-        MDC.put("itemStatus", "PROCESS");
-        log.info("Process a new Generation Event: {}", noticeGenerationRequestItem);
+        MDC.put("itemStatus", "PROCESSING");
+        log.info("Process a new Generation Event: {}", sanitizeLogParam(noticeGenerationRequestItem.toString()));
+        MDC.remove("itemStatus");
 
 
         try {
@@ -159,6 +160,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     paymentGenerationRequestRepository.findAndDecrementNumberOfElementsFailedById(folderId);
                     MDC.put("itemStatus", "RECOVERED");
                     log.info("Recovered Generation Event - errorId: {}", errorId);
+                    MDC.remove("itemStatus");
                 }
             }
 
@@ -232,6 +234,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
                 MDC.put("massiveStatus", "COMPLETING");
                 log.info("Massive Request COMPLETING: {}", folderId);
+                MDC.remove("massiveStatus");
             }
 
         } catch (Exception e) {
@@ -266,6 +269,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             if (!constraintValidators.isEmpty()) {
                 MDC.put("itemStatus", "EXCEPTION");
                 log.error("Exception Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
+                MDC.remove("itemStatus");
                 throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(
                         constraintValidators.stream().map(ConstraintViolation::getMessage).toList()));
             }
@@ -287,9 +291,11 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                                 .build());
                 MDC.put("itemStatus", "FAILED");
                 log.info("Failed Generation Event: {}", e.getMessage(), e);
+                MDC.remove("itemStatus");
             } catch (Exception cryptException) {
                 MDC.put("itemStatus", "EXCEPTION");
                 log.error("Exception Generation Event: Unable to save unparsable data to error", cryptException);
+                MDC.remove("itemStatus");
             }
         }
 
@@ -298,10 +304,12 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 generateNotice(noticeGenerationRequestItem, folderId, errorId);
                 MDC.put("itemStatus", "SUCCESS");
                 log.info("Success Generation Event: {}", noticeRequestEH);
+                MDC.remove("itemStatus");
             }
         } catch (Exception e) {
             MDC.put("itemStatus", "EXCEPTION");
             log.error("Exception Generation Event: {}", e.getMessage(), e);
+            MDC.remove("itemStatus");
             throw e;
         }
 
@@ -337,6 +345,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             noticeRequestErrorProducer.noticeError(paymentNoticeGenerationRequestError);
             MDC.put("itemStatus", "FAILED");
             log.info("Failed Generation Event: {}", toSave);
+            MDC.remove("itemStatus");
         } catch (Exception e) {
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
                     sanitizeLogParam(folderId),
