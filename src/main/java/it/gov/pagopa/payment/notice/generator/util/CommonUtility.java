@@ -70,17 +70,11 @@ public class CommonUtility {
         return "suspicious log param";
     }
 
-    public static String getMessageId(NoticeRequestEH noticeGenerationRequestEH) {
-        try {
-            String code = noticeGenerationRequestEH.getNoticeData().getData().getNotice().getCode();
-            if (code == null) {
-                code = noticeGenerationRequestEH.getNoticeData().getData().getNotice().getInstallments().get(0).getCode();
-            }
-            return code;
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            return null;
-        }
+    public static String getItemId(NoticeRequestEH noticeGenerationRequestEH) {
+        return String.format("%s-%s-%s-%s", "pagopa-avviso",
+                noticeGenerationRequestEH.getNoticeData().getData().getCreditorInstitution().getTaxCode(),
+                noticeGenerationRequestEH.getNoticeData().getData().getNotice().getCode(),
+                noticeGenerationRequestEH.getNoticeData().getTemplateId());
     }
 
 }

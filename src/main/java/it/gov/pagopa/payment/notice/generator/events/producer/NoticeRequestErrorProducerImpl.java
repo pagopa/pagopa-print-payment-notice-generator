@@ -34,8 +34,10 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
                 buildMessage(paymentNoticeGenerationRequestError));
 
         MDC.put("topic", "error");
+        MDC.put("action", "sent");
         log.info("Error Message Sent");
         MDC.remove("topic");
+        MDC.remove("action");
 
         return res;
     }

@@ -34,8 +34,10 @@ public class NoticeRequestCompleteProducerImpl implements NoticeRequestCompleteP
                 buildMessage(paymentNoticeGenerationRequest));
 
         MDC.put("topic", "complete");
+        MDC.put("action", "sent");
         log.info("Complete Message Sent");
         MDC.remove("topic");
+        MDC.remove("action");
 
         return res;
     }

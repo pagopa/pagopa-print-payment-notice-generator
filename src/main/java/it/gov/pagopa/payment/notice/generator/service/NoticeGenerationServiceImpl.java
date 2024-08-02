@@ -40,7 +40,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
-import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.getMessageId;
+import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.getItemId;
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
@@ -115,7 +115,6 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode(),
                 noticeGenerationRequestItem.getData().getNotice().getCode(),
                 noticeGenerationRequestItem.getTemplateId());
-        MDC.put("itemId", itemId);
         MDC.put("itemStatus", "PROCESSING");
         log.info("Process a new Generation Event: {}", sanitizeLogParam(noticeGenerationRequestItem.toString()));
         MDC.remove("itemStatus");
@@ -267,9 +266,11 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
             MDC.put("folderId", noticeRequestEH.getFolderId());
             MDC.put("topic", "generation");
-            MDC.put("messageId", getMessageId(noticeRequestEH));
-            log.info("Received Generation Message: notice {}", getMessageId(noticeRequestEH));
+            MDC.put("action", "received");
+            MDC.put("itemId", getItemId(noticeRequestEH));
+            log.info("Received Generation Message: notice {}", getItemId(noticeRequestEH));
             MDC.remove("topic");
+            MDC.remove("action");
 
             log.info("Pre-Process a new Generation Request Event: {}", noticeRequestEH);
 
