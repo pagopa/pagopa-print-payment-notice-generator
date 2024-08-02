@@ -223,6 +223,10 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             }
 
             paymentGenerationRequestRepository.findAndAddItemById(folderId, itemId);
+            MDC.put("massiveStatus", "PROCESSING");
+            log.info("Massive Request PROCESSING: {}", folderId);
+            MDC.remove("massiveStatus");
+
             var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId)
                     .orElseThrow();
 
