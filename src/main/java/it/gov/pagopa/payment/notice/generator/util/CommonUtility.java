@@ -1,7 +1,10 @@
 package it.gov.pagopa.payment.notice.generator.util;
 
+import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Calendar;
 import java.util.List;
@@ -9,6 +12,8 @@ import java.util.Optional;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommonUtility {
+
+    private static final Logger log = LoggerFactory.getLogger(CommonUtility.class);
 
 
     /**
@@ -59,10 +64,17 @@ public class CommonUtility {
      * @return the sanitized param
      */
     public static String sanitizeLogParam(String logParam) {
-        if(logParam.matches("\\w*")) {
+        if (logParam.matches("\\w*")) {
             return logParam;
         }
         return "suspicious log param";
+    }
+
+    public static String getItemId(NoticeRequestEH noticeGenerationRequestEH) {
+        return String.format("%s-%s-%s-%s", "pagopa-avviso",
+                noticeGenerationRequestEH.getNoticeData().getData().getCreditorInstitution().getTaxCode(),
+                noticeGenerationRequestEH.getNoticeData().getData().getNotice().getCode(),
+                noticeGenerationRequestEH.getNoticeData().getTemplateId());
     }
 
 }
