@@ -223,7 +223,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             paymentGenerationRequestRepository.findAndAddItemById(folderId, itemId);
             MDC.put("massiveStatus", "PROCESSING");
-            log.info("Massive Request PROCESSING: {}", folderId);
+            log.info("Massive Request PROCESSING: {}", sanitizeLogParam(folderId));
             MDC.remove("massiveStatus");
 
             var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId)
@@ -236,7 +236,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
                 noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
                 MDC.put("massiveStatus", "COMPLETING");
-                log.info("Massive Request COMPLETING: {}", folderId);
+                log.info("Massive Request COMPLETING: {}", sanitizeLogParam(folderId));
                 MDC.remove("massiveStatus");
             }
 
