@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Set;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.getItemId;
-import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
 /**
@@ -116,7 +115,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 noticeGenerationRequestItem.getData().getNotice().getCode(),
                 noticeGenerationRequestItem.getTemplateId());
         MDC.put("itemStatus", "PROCESSING");
-        log.info("Process a new Generation Event: {}", sanitizeLogParam(noticeGenerationRequestItem.toString()));
+        log.info("Process a new Generation Event: {}", noticeGenerationRequestItem);
         MDC.remove("itemStatus");
 
 
@@ -223,7 +222,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             paymentGenerationRequestRepository.findAndAddItemById(folderId, itemId);
             MDC.put("massiveStatus", "PROCESSING");
-            log.info("Massive Request PROCESSING: {}", sanitizeLogParam(folderId));
+            log.info("Massive Request PROCESSING: {}", folderId);
             MDC.remove("massiveStatus");
 
             var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId)
@@ -236,7 +235,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                 paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
                 noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
                 MDC.put("massiveStatus", "COMPLETING");
-                log.info("Massive Request COMPLETING: {}", sanitizeLogParam(folderId));
+                log.info("Massive Request COMPLETING: {}", folderId);
                 MDC.remove("massiveStatus");
             }
 
@@ -357,8 +356,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             MDC.remove("itemStatus");
         } catch (Exception e) {
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
-                    sanitizeLogParam(folderId),
-                    sanitizeLogParam(noticeGenerationRequestItem.getData().getNotice().getCode()),
+                    folderId,
+                    noticeGenerationRequestItem.getData().getNotice().getCode(),
                     e
             );
         }
