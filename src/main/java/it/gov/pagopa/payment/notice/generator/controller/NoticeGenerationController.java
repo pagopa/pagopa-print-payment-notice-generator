@@ -54,6 +54,8 @@ public class NoticeGenerationController {
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"");
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).headers(headers).body(new ByteArrayResource(inputStream.readAllBytes()));
+        } catch (AppException e) {
+            throw e;
         } catch (Exception e) {
             throw new AppException(AppError.INTERNAL_SERVER_ERROR, e);
         } finally {
