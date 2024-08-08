@@ -60,20 +60,20 @@ public class LoggingAspect {
     }
 
     private static String getDetail(ResponseEntity<ProblemJson> result) {
-        if (result != null && result.getBody() != null && result.getBody().getDetail() != null) {
-            return result.getBody().getDetail().substring(0, 200);
+        if(result != null && result.getBody() != null && result.getBody().getDetail() != null) {
+            return result.getBody().getDetail().substring(0, Math.min(result.getBody().getDetail().length(), 200));
         } else return AppError.UNKNOWN.getDetails();
     }
 
     private static String getTitle(ResponseEntity<ProblemJson> result) {
-        if (result != null && result.getBody() != null && result.getBody().getTitle() != null) {
+        if(result != null && result.getBody() != null && result.getBody().getTitle() != null) {
             return result.getBody().getTitle();
         } else return AppError.UNKNOWN.getTitle();
     }
 
     public static String getExecutionTime() {
         String startTime = MDC.get(START_TIME);
-        if (startTime != null) {
+        if(startTime != null) {
             long endTime = System.currentTimeMillis();
             long executionTime = endTime - Long.parseLong(startTime);
             return String.valueOf(executionTime);
@@ -119,7 +119,7 @@ public class LoggingAspect {
         MDC.put(METHOD, joinPoint.getSignature().getName());
         MDC.put(START_TIME, String.valueOf(System.currentTimeMillis()));
         MDC.put(OPERATION_ID, UUID.randomUUID().toString());
-        if (MDC.get(REQUEST_ID) == null) {
+        if(MDC.get(REQUEST_ID) == null) {
             var requestId = UUID.randomUUID().toString();
             MDC.put(REQUEST_ID, requestId);
         }
