@@ -26,6 +26,7 @@ import it.gov.pagopa.payment.notice.generator.storage.NoticeTemplateStorageClien
 import it.gov.pagopa.payment.notice.generator.util.Aes256Utils;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.slf4j.MDC;
@@ -100,6 +101,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
      * @param folderId                    optional parameter to generate folderId
      * @return generated notice
      */
+    @SneakyThrows
     @Override
     public File generateNotice(NoticeGenerationRequestItem noticeGenerationRequestItem,
                                String folderId,
@@ -168,6 +170,11 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             if (folderId != null) {
                 saveErrorEvent(errorId, itemId, folderId, noticeGenerationRequestItem, e.getMessage());
             }
+
+            if (e instanceof AppException) {
+                throw e;
+            }
+
             throw new AppException(AppError.INTERNAL_SERVER_ERROR, e);
         }
 
