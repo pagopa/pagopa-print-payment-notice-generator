@@ -80,7 +80,7 @@ microservice-chart:
   envConfig:
     WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-uat'
-    APP_LOGGING_LEVEL: 'DEBUG'
+    APP_LOGGING_LEVEL: 'INFO'
     DEFAULT_LOGGING_LEVEL: 'INFO'
     CORS_CONFIGURATION: '{"origins": ["*"], "methods": ["*"]}'
     OTEL_SERVICE_NAME: 'print-payment-notice-generator'
