@@ -16,6 +16,7 @@ import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
 import it.gov.pagopa.payment.notice.generator.model.TemplateResource;
 import it.gov.pagopa.payment.notice.generator.model.enums.PaymentGenerationRequestStatus;
 import it.gov.pagopa.payment.notice.generator.model.notice.CreditorInstitution;
+import it.gov.pagopa.payment.notice.generator.model.notice.Notice;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineRequest;
 import it.gov.pagopa.payment.notice.generator.model.pdf.PdfEngineResponse;
 import it.gov.pagopa.payment.notice.generator.repository.PaymentGenerationRequestErrorRepository;
@@ -40,6 +41,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.getItemId;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
@@ -108,13 +110,13 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                                String errorId) {
 
 
-        if (folderId != null) {
+        if(folderId != null) {
             findFolderIfExists(folderId);
         }
 
         String itemId = String.format("%s-%s-%s-%s", "pagopa-avviso",
                 noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode(),
-                noticeGenerationRequestItem.getData().getNotice().getCode(),
+                getNoticeCode(noticeGenerationRequestItem),
                 noticeGenerationRequestItem.getTemplateId());
         MDC.put("itemStatus", "PROCESSING");
         log.info("Process a new Generation Event: {}", noticeGenerationRequestItem);
@@ -153,9 +155,9 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             PdfEngineResponse pdfEngineResponse = callPdfEngine(request, tempDirectory);
 
-            if (folderId != null) {
+            if(folderId != null) {
                 addNoticeIntoFolder(itemId, folderId, pdfEngineResponse);
-                if (errorId != null) {
+                if(errorId != null) {
                     paymentGenerationRequestErrorRepository.deleteByErrorIdAndFolderId(errorId, folderId);
                     paymentGenerationRequestRepository.findAndDecrementNumberOfElementsFailedById(folderId);
                     MDC.put("itemStatus", "RECOVERED");
@@ -167,11 +169,11 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             return new File(pdfEngineResponse.getTempPdfPath());
 
         } catch (Exception e) {
-            if (folderId != null) {
+            if(folderId != null) {
                 saveErrorEvent(errorId, itemId, folderId, noticeGenerationRequestItem, e.getMessage());
             }
 
-            if (e instanceof AppException) {
+            if(e instanceof AppException) {
                 throw e;
             }
 
@@ -181,10 +183,40 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     }
 
 
+    /**
+     * Retrieves the notice code, given a {@link NoticeGenerationRequestItem}.
+     * If the notice has a code, it is returned. Otherwise, the code of the first
+     * installment is returned. If no installments are present, a random UUID is generated.
+     *
+     * @param noticeGenerationRequestItem the {@link NoticeGenerationRequestItem}
+     * @return the notice code
+     */
+    private static String getNoticeCode(NoticeGenerationRequestItem noticeGenerationRequestItem) {
+        Notice notice = noticeGenerationRequestItem.getData().getNotice();
+        if(notice.getCode() != null) {
+            return notice.getCode();
+        }
+
+        if(notice.getReduced() != null) {
+            return notice.getReduced().getCode();
+        }
+
+        if(notice.getDiscounted() != null) {
+            return notice.getDiscounted().getCode();
+        }
+
+        if(notice.getInstallments() != null && !notice.getInstallments().isEmpty()) {
+            return notice.getInstallments().get(0).getCode();
+        }
+
+        return UUID.randomUUID().toString();
+    }
+
+
     private PdfEngineResponse callPdfEngine(PdfEngineRequest request, Path tempDirectory) {
         PdfEngineResponse pdfEngineResponse = pdfEngineClient.generatePDF(request, tempDirectory);
 
-        if (pdfEngineResponse.getStatusCode() != HttpStatus.SC_OK) {
+        if(pdfEngineResponse.getStatusCode() != HttpStatus.SC_OK) {
             String errMsg = String.format("PDF-Engine response KO (%s): %s", pdfEngineResponse.getStatusCode(), pdfEngineResponse.getErrorMessage());
             log.error(errMsg);
             throw new AppException(AppError.PDF_ENGINE_ERROR, errMsg);
@@ -200,7 +232,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
      * @throws JsonProcessingException if template is not readable as json
      */
     private void validateTemplate(NoticeGenerationRequestItem noticeGenerationRequestItem, TemplateResource templateResource) throws JsonProcessingException {
-        if (templateResource != null && templateResource.getTemplateValidationRules() != null) {
+        if(templateResource != null && templateResource.getTemplateValidationRules() != null) {
             JsonSchema jsonSchema = JsonSchemaFactory
                     .getInstance(SpecVersion.VersionFlag.V7)
                     .getSchema(templateResource.getTemplateValidationRules());
@@ -208,7 +240,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             Set<ValidationMessage> validationMessageSet = jsonSchema.validate(jsonStringSchema, InputFormat.JSON);
             // check if there are validation messages
-            if (!validationMessageSet.isEmpty()) {
+            if(!validationMessageSet.isEmpty()) {
                 List<String> value = validationMessageSet.stream()
                         .map(ValidationMessage::getMessage)
                         .toList();
@@ -223,7 +255,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         try (BufferedInputStream pdfStream = new BufferedInputStream(
                 new FileInputStream(pdfEngineResponse.getTempPdfPath()))) {
 
-            if (!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, itemId)) {
+            if(!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, itemId)) {
                 throw new RuntimeException("Encountered error during blob saving");
             }
 
@@ -235,7 +267,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId)
                     .orElseThrow();
 
-            if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING)
+            if(paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING)
                     && paymentNoticeGenerationRequest.getNumberOfElementsTotal()
                     <= paymentNoticeGenerationRequest.getItems().size() + paymentNoticeGenerationRequest.getNumberOfElementsFailed()
                     && paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
@@ -281,7 +313,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             log.info("Pre-Process a new Generation Request Event: {}", noticeRequestEH);
 
             Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
-            if (!constraintValidators.isEmpty()) {
+            if(!constraintValidators.isEmpty()) {
                 MDC.put("itemStatus", "EXCEPTION");
                 log.error("Exception Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
                 MDC.remove("itemStatus");
@@ -315,7 +347,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         }
 
         try {
-            if (noticeGenerationRequestItem != null && folderId != null) {
+            if(noticeGenerationRequestItem != null && folderId != null) {
                 generateNotice(noticeGenerationRequestItem, folderId, errorId);
                 MDC.put("itemStatus", "SUCCESS");
                 log.info("Success Generation Event: {}", noticeRequestEH);
@@ -341,7 +373,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     paymentGenerationRequestErrorRepository.findByErrorIdAndFolderId(errorId != null ?
                             errorId : itemId, folderId).orElse(null);
 
-            if (toSave == null) {
+            if(toSave == null) {
                 toSave = PaymentNoticeGenerationRequestError.builder()
                         .errorId(itemId)
                         .errorDescription(error)
@@ -364,7 +396,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         } catch (Exception e) {
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
                     folderId,
-                    noticeGenerationRequestItem.getData().getNotice().getCode(),
+                    getNoticeCode(noticeGenerationRequestItem),
                     e
             );
         }
