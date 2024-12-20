@@ -40,6 +40,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -193,23 +194,25 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
      */
     private static String getNoticeCode(NoticeGenerationRequestItem noticeGenerationRequestItem) {
         Notice notice = noticeGenerationRequestItem.getData().getNotice();
+        String code = null;
         if(notice.getCode() != null) {
-            return notice.getCode();
+            code = notice.getCode();
         }
 
         if(notice.getReduced() != null) {
-            return notice.getReduced().getCode();
+            code = notice.getReduced().getCode();
         }
 
         if(notice.getDiscounted() != null) {
-            return notice.getDiscounted().getCode();
+            code = notice.getDiscounted().getCode();
         }
 
         if(notice.getInstallments() != null && !notice.getInstallments().isEmpty()) {
-            return notice.getInstallments().get(0).getCode();
+            code = notice.getInstallments().get(0).getCode();
         }
 
-        return UUID.randomUUID().toString();
+        return Optional.ofNullable(code)
+                .orElse(UUID.randomUUID().toString());
     }
 
 
