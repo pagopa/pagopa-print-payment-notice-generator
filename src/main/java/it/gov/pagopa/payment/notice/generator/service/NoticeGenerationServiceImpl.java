@@ -192,7 +192,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
      * @param noticeGenerationRequestItem the {@link NoticeGenerationRequestItem}
      * @return the notice code
      */
-    private static String getNoticeCode(NoticeGenerationRequestItem noticeGenerationRequestItem) {
+    public static String getNoticeCode(NoticeGenerationRequestItem noticeGenerationRequestItem) {
         Notice notice = noticeGenerationRequestItem.getData().getNotice();
         String code = null;
         if(notice.getCode() != null) {
