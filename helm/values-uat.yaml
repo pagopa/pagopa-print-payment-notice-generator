@@ -33,9 +33,9 @@ microservice-chart:
     path: /pagopa-print-payment-notice-generator/(.*)
     servicePort: 8080
   serviceAccount:
+    create: false
+    annotations: {}
     name: "printit-workload-identity"
-  azure:
-    workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
   podAnnotations: {}
   podSecurityContext:
     seccompProfile:
@@ -62,8 +62,8 @@ microservice-chart:
       cpu: "1.5"
   autoscaling:
     enable: true
-    minReplica: 3
-    maxReplica: 10
+    minReplica: 1
+    maxReplica: 1
     pollingInterval: 30 # seconds
     cooldownPeriod: 300 # seconds
     triggers:
@@ -72,12 +72,8 @@ microservice-chart:
           # Required
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
-      - type: memory
-        metadata:
-          # Required
-          type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
-          value: "70"
   envConfig:
+    ASPNETCORE_URLS: "http://*:8080"
     WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-uat'
     APP_LOGGING_LEVEL: 'INFO'
@@ -126,21 +122,7 @@ microservice-chart:
                 values:
                   - user
   canaryDelivery:
-    create: false
-    ingress:
-      create: true
-      canary:
-        type: header
-        headerName: X-Canary
-        headerValue: canary
-        weightPercent: 0
-    service:
-      create: true
     deployment:
-      create: true
       image:
-        repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
         tag: "0.0.0"
-        pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+    create: false
