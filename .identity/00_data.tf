@@ -18,8 +18,8 @@ data "github_organization_teams" "all" {
 }
 
 data "azurerm_user_assigned_identity" "identity_cd_01" {
-  name                = "${local.prefix}-${var.env_short}-${local.domain}-01-github-cd-identity"
-  resource_group_name = "${local.prefix}-${var.env_short}-identity-rg"
+  resource_group_name = "${local.product}-identity-rg"
+  name                = "${local.product}-${local.domain}-job-01-github-cd-identity"
 }
 
 data "azurerm_key_vault" "key_vault" {
@@ -54,4 +54,9 @@ data "azurerm_key_vault_secret" "key_vault_cucumber_token" {
 data "azurerm_key_vault_secret" "key_vault_integration_test_subkey" {
   name         = "integration-test-subkey"
   key_vault_id = data.azurerm_key_vault.key_vault.id
+}
+
+data "azurerm_user_assigned_identity" "workload_identity_clientid" {
+  name                = "printit-workload-identity"
+  resource_group_name = "pagopa-${var.env_short}-itn-${var.env}-aks-rg"
 }
