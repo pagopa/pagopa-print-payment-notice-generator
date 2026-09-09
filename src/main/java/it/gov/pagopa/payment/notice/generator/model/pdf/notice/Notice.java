@@ -17,10 +17,10 @@ public class Notice {
     private String qrCode;
     private String refNumber;
     private String cbillCode;
+    private String postePayeeName;
     private String posteAccountNumber;
     private String posteAuth;
     private String posteDocumentType;
     private String posteDataMatrix;
     private Installments instalments;
-
 }
