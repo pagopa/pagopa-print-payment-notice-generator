@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-generator"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
-    tag: "0.4.9-1-PIDM-2384-fix-poste-name"
+    tag: "0.4.10"
     pullPolicy: Always
   livenessProbe:
     httpGet:
