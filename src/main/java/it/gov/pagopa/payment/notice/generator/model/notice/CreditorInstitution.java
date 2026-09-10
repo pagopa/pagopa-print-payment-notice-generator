@@ -50,6 +50,7 @@ public class CreditorInstitution {
     @Schema(description = "Poste account number")
     private String posteAccountNumber;
 
-
+    @Schema(description = "Poste name")
+    private String posteName;
 
 }

@@ -39,7 +39,7 @@ public class TemplateDataMapper {
         String subject = noticeRequestData.getNotice().getSubject();
         String posteAuthCode = noticeRequestData.getCreditorInstitution().getPosteAuth();
         String posteAccountNumber = noticeRequestData.getCreditorInstitution().getPosteAccountNumber();
-
+        String posteName = noticeRequestData.getCreditorInstitution().getPosteName();
 
         return PaymentNotice.builder()
                 .payee(Payee.builder()
@@ -81,6 +81,7 @@ public class TemplateDataMapper {
                         )
                         .subject(noticeRequestData.getNotice().getSubject())
                         .amount(noticeAmount != null ? currencyFormat(noticeAmount) : null)
+                        .postePayeeName(posteName)
                         .posteAuth(posteAuthCode)
                         .posteAccountNumber(posteAccountNumber)
                         .posteDocumentType(POSTE_DOCUMENT_TYPE_CODE)
