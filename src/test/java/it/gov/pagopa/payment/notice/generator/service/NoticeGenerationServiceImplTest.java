@@ -6,6 +6,7 @@ import it.gov.pagopa.payment.notice.generator.entity.PaymentNoticeGenerationRequ
 import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompleteProducer;
 import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestErrorProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
+import it.gov.pagopa.payment.notice.generator.exception.CompletionEventPublicationException;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
 import it.gov.pagopa.payment.notice.generator.model.TemplateResource;
@@ -23,7 +24,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import lombok.SneakyThrows;
 import org.apache.http.HttpStatus;
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,10 +44,10 @@ import static org.mockito.Mockito.*;
 class NoticeGenerationServiceImplTest {
 
     @Mock
-    public PaymentGenerationRequestRepository paymentGenerationRequestRepository;
+    PaymentGenerationRequestRepository paymentGenerationRequestRepository;
 
     @Mock
-    public PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository;
+    PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository;
 
     @Mock
     InstitutionsStorageClient institutionsStorageClient;
@@ -78,7 +79,7 @@ class NoticeGenerationServiceImplTest {
 
 
     @SneakyThrows
-    public NoticeGenerationServiceImplTest() {
+    NoticeGenerationServiceImplTest() {
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         validator = factory.getValidator();
 
@@ -93,7 +94,7 @@ class NoticeGenerationServiceImplTest {
     }
 
     @BeforeEach
-    public void init() {
+    void init() {
         Mockito.reset(paymentGenerationRequestErrorRepository, paymentGenerationRequestRepository,
                 institutionsStorageClient, noticeStorageClient, noticeTemplateStorageClient, pdfEngineClient);
         lenient().when(noticeTemplateStorageClient.getTemplates()).thenReturn(Collections.emptyList());
@@ -127,6 +128,7 @@ class NoticeGenerationServiceImplTest {
                 .items(Collections.singletonList("test")).build())).when(paymentGenerationRequestRepository)
                 .findById(any());
         doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete(any());
+        doReturn(true).when(noticeRequestCompleteProducer).noticeComplete(any());
 
         NoticeRequestEH noticeRequestEH = NoticeRequestEH
                 .builder()
@@ -238,9 +240,8 @@ class NoticeGenerationServiceImplTest {
                                 .build())
                         .build())
                 .build();
-        Assert.assertThrows(AppException.class, () ->
-                noticeGenerationService.processNoticeGenerationEH(
-                        objectMapper.writeValueAsString(noticeRequestEH)));
+		String message = objectMapper.writeValueAsString(noticeRequestEH);
+		assertThrows(AppException.class, () -> noticeGenerationService.processNoticeGenerationEH(message));
         verify(paymentGenerationRequestRepository).findById(any());
         verify(institutionsStorageClient).getInstitutionData(any());
         verify(noticeTemplateStorageClient).getTemplate(any());
@@ -287,9 +288,8 @@ class NoticeGenerationServiceImplTest {
                                 .build())
                         .build())
                 .build();
-        Assert.assertThrows(AppException.class, () ->
-                noticeGenerationService.processNoticeGenerationEH(
-                        objectMapper.writeValueAsString(noticeRequestEH)));
+		String message = objectMapper.writeValueAsString(noticeRequestEH);
+		assertThrows(AppException.class, () -> noticeGenerationService.processNoticeGenerationEH(message));
     }
 
     @SneakyThrows
@@ -351,9 +351,10 @@ class NoticeGenerationServiceImplTest {
                                 .build())
                         .build())
                 .build();
-        Assert.assertThrows(AppException.class, () ->
-                noticeGenerationService.processNoticeGenerationEH(
-                        objectMapper.writeValueAsString(noticeRequestEH)));
+        
+		String message = objectMapper.writeValueAsString(noticeRequestEH);
+		assertThrows(AppException.class, () -> noticeGenerationService.processNoticeGenerationEH(message));
+		
         verify(paymentGenerationRequestRepository).findById(any());
         verify(institutionsStorageClient).getInstitutionData(any());
         verify(noticeTemplateStorageClient).getTemplate(any());
@@ -423,9 +424,10 @@ class NoticeGenerationServiceImplTest {
                                 .build())
                         .build())
                 .build();
-        Assert.assertThrows(AppException.class, () ->
-                noticeGenerationService.processNoticeGenerationEH(
-                        objectMapper.writeValueAsString(noticeRequestEH)));
+
+		String message = objectMapper.writeValueAsString(noticeRequestEH);
+		assertThrows(AppException.class, () -> noticeGenerationService.processNoticeGenerationEH(message));
+        
         verify(paymentGenerationRequestRepository).findById(any());
         verify(institutionsStorageClient).getInstitutionData(any());
         verify(paymentGenerationRequestErrorRepository).save(any());
@@ -465,6 +467,7 @@ class NoticeGenerationServiceImplTest {
                 .items(Collections.singletonList("test")).build())).when(paymentGenerationRequestRepository)
                 .findById(any());
         doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete(any());
+        doReturn(true).when(noticeRequestCompleteProducer).noticeComplete(any());
 
         NoticeRequestEH noticeRequestEH = NoticeRequestEH
                 .builder()
@@ -518,6 +521,110 @@ class NoticeGenerationServiceImplTest {
         verify(pdfEngineClient).generatePDF(any(), any());
         verifyNoInteractions(paymentGenerationRequestErrorRepository);
     }
+    
+	@SneakyThrows
+	@Test
+	void processNoticeGenerationShouldRollbackToProcessingWhenCompletionEventCannotBePublished() {
+
+		doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
+
+		doReturn(CreditorInstitution.builder().webChannel(true).physicalChannel("Test").fullName("Test").logo("logo")
+				.cbill("Cbill").organization("ORG").build()).when(institutionsStorageClient).getInstitutionData(any());
+
+		doReturn(getPdfEngineResponse(HttpStatus.SC_OK, noticeFile.getPath())).when(pdfEngineClient).generatePDF(any(),
+				any());
+
+		doReturn(true).when(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
+
+		doReturn(1L).when(paymentGenerationRequestRepository).findAndAddItemById(any(), any());
+
+		doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().id("test")
+				.status(PaymentGenerationRequestStatus.PROCESSING).numberOfElementsTotal(1).numberOfElementsFailed(0)
+				.items(Collections.singletonList("test")).build())).when(paymentGenerationRequestRepository)
+				.findById(any());
+
+		doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete(any());
+
+		/*
+		 * Simulate an Event Hub publication failure after Mongo has already been moved
+		 * to COMPLETING.
+		 */
+		doReturn(false).when(noticeRequestCompleteProducer).noticeComplete(any());
+
+		/*
+		 * Simulate a successful compensation from COMPLETING back to PROCESSING, so
+		 * that the generation message can be retried.
+		 */
+		doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToProcessing(any());
+
+		NoticeRequestEH noticeRequestEH = NoticeRequestEH.builder().folderId("test")
+				.noticeData(
+						NoticeGenerationRequestItem.builder().templateId("template")
+								.data(NoticeRequestData.builder().notice(Notice.builder().code("code")
+										.dueDate("24/10/2024").subject("subject").paymentAmount(100L)
+										.reduced(InstallmentData.builder().amount(100L).code("codeRate")
+												.dueDate("24/10/2024").build())
+										.discounted(InstallmentData.builder().amount(100L).code("codeRate")
+												.dueDate("24/10/2024").build())
+										.installments(Collections.singletonList(InstallmentData.builder().amount(100L)
+												.code("codeRate").dueDate("24/10/2024").build()))
+										.build())
+										.creditorInstitution(CreditorInstitution.builder().taxCode("taxCode").build())
+										.debtor(Debtor.builder().taxCode("taxCode").address("address").city("city")
+												.buildingNumber("101").postalCode("00135").province("RM")
+												.fullName("Test Name").build())
+										.build())
+								.build())
+				.build();
+
+		/*
+		 * The failure concerns only the publication of the completion event. The PDF
+		 * has already been successfully generated and stored, therefore it must not be
+		 * converted into a notice generation error.
+		 */
+		String message = objectMapper.writeValueAsString(noticeRequestEH);
+		assertThrows(CompletionEventPublicationException.class,
+				() -> noticeGenerationService.processNoticeGenerationEH(message));
+
+		/*
+		 * The notice itself must have been generated and stored successfully.
+		 */
+		verify(pdfEngineClient).generatePDF(any(), any());
+
+		verify(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
+
+		verify(paymentGenerationRequestRepository).findAndAddItemById(any(), any());
+
+		/*
+		 * Once every notice has been processed, this instance acquires the PROCESSING
+		 * -> COMPLETING transition.
+		 */
+		verify(paymentGenerationRequestRepository).findAndSetToComplete("test");
+
+		/*
+		 * The completion event publication is attempted with a folder already marked as
+		 * COMPLETING.
+		 */
+		verify(noticeRequestCompleteProducer).noticeComplete(
+				argThat(request -> PaymentGenerationRequestStatus.COMPLETING.equals(request.getStatus())));
+
+		/*
+		 * Since the completion event could not be published, the folder must be
+		 * restored to PROCESSING instead of remaining permanently stuck in COMPLETING.
+		 */
+		verify(paymentGenerationRequestRepository).findAndSetToProcessing("test");
+
+		/*
+		 * A completion publication failure is not a notice generation failure: the PDF
+		 * was successfully produced and stored, therefore no error record must be
+		 * created and the failed notices counter must not be incremented.
+		 */
+		verifyNoInteractions(paymentGenerationRequestErrorRepository);
+
+		verify(paymentGenerationRequestRepository, never()).findAndIncrementNumberOfElementsFailedById(any());
+
+		verifyNoInteractions(noticeRequestErrorProducer);
+	}
 
     private PdfEngineResponse getPdfEngineResponse(int status, String pdfPath) {
         PdfEngineResponse pdfEngineResponse = new PdfEngineResponse();

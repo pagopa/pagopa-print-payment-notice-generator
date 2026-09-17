@@ -10,6 +10,7 @@ import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompl
 import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestErrorProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
+import it.gov.pagopa.payment.notice.generator.exception.CompletionEventPublicationException;
 import it.gov.pagopa.payment.notice.generator.mapper.TemplateDataMapper;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
@@ -169,6 +170,16 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
             return new File(pdfEngineResponse.getTempPdfPath());
 
+        } catch (CompletionEventPublicationException e) {
+
+            /*
+             * The notice itself was successfully generated and stored.
+             * Do not create a notice error or increment numberOfElementsFailed.
+             * Propagating the exception allows the generation message to be
+             * redelivered and the completion publication to be retried.
+             */
+            throw e;
+
         } catch (Exception e) {
             if(folderId != null) {
                 saveErrorEvent(errorId, itemId, folderId, noticeGenerationRequestItem, e.getMessage());
@@ -274,12 +285,40 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     && paymentNoticeGenerationRequest.getNumberOfElementsTotal()
                     <= paymentNoticeGenerationRequest.getItems().size() + paymentNoticeGenerationRequest.getNumberOfElementsFailed()
                     && paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
-                paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
-                noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
+                
+            	paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
+                
+                boolean completionEventSent =
+                        noticeRequestCompleteProducer.noticeComplete(
+                                paymentNoticeGenerationRequest);
+                
+                if (!completionEventSent) {
+
+                    /*
+                     * Restore PROCESSING so that a redelivery of the generation event can
+                     * acquire the completion transition again and retry publishing the
+                     * completion event.
+                     */
+                    paymentGenerationRequestRepository
+                            .findAndSetToProcessing(folderId);
+
+                    throw new CompletionEventPublicationException(folderId);
+                }
+                
                 MDC.put("massiveStatus", "COMPLETING");
                 log.info("Massive Request COMPLETING: {}", folderId);
                 MDC.remove("massiveStatus");
             }
+
+        } catch (CompletionEventPublicationException e) {
+            /*
+             * The PDF has already been generated and stored successfully.
+             * Propagate the completion publication error without converting it into
+             * a AppError.NOTICE_SAVE_ERROR, otherwise the notice would be incorrectly marked
+             * as failed.
+             */
+            log.error(e.getMessage(), e);
+            throw e;
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
