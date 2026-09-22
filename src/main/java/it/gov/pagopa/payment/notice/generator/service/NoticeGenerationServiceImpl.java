@@ -317,71 +317,74 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     public void processNoticeGenerationEH(String message) {
         MDC.clear();
 
-
-        String folderId = null;
-        NoticeGenerationRequestItem noticeGenerationRequestItem = null;
-        String errorId = null;
-        NoticeRequestEH noticeRequestEH = null;
-
         try {
+            String folderId = null;
+            NoticeGenerationRequestItem noticeGenerationRequestItem = null;
+            String errorId = null;
+            NoticeRequestEH noticeRequestEH = null;
 
-            noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
-            MDC.put("folderId", noticeRequestEH.getFolderId());
-            MDC.put("topic", "generation");
-            MDC.put("action", "received");
-            MDC.put("itemId", getItemId(noticeRequestEH));
-            log.info("Received Generation Message: notice {}", getItemId(noticeRequestEH));
-            MDC.remove("topic");
-            MDC.remove("action");
-
-            log.info("Pre-Process a new Generation Request Event: {}", noticeRequestEH);
-
-            Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
-            if(!constraintValidators.isEmpty()) {
-                MDC.put("itemStatus", "EXCEPTION");
-                log.error("Exception Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
-                MDC.remove("itemStatus");
-                throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(
-                        constraintValidators.stream().map(ConstraintViolation::getMessage).toList()));
-            }
-
-            folderId = noticeRequestEH.getFolderId();
-            noticeGenerationRequestItem = noticeRequestEH.getNoticeData();
-            errorId = noticeRequestEH.getErrorId();
-
-        } catch (JsonProcessingException e) {
             try {
-                paymentGenerationRequestErrorRepository.save(
-                        PaymentNoticeGenerationRequestError.builder()
-                                .errorDescription("Unable to read EH message content")
-                                .folderId("UNKNOWN")
-                                .data(message != null ? aes256Utils.encrypt(message) : "EMPTY")
-                                .createdAt(Instant.now())
-                                .numberOfAttempts(0)
-                                .compressionError(false)
-                                .build());
-                MDC.put("itemStatus", "FAILED");
-                log.info("Failed Generation Event: {}", e.getMessage(), e);
-                MDC.remove("itemStatus");
-            } catch (Exception cryptException) {
-                MDC.put("itemStatus", "EXCEPTION");
-                log.error("Exception Generation Event: Unable to save unparsable data to error", cryptException);
-                MDC.remove("itemStatus");
-            }
-        }
 
-        try {
-            if(noticeGenerationRequestItem != null && folderId != null) {
-                generateNotice(noticeGenerationRequestItem, folderId, errorId);
-                MDC.put("itemStatus", "SUCCESS");
-                log.info("Success Generation Event: {}", noticeRequestEH);
-                MDC.remove("itemStatus");
+                noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
+                MDC.put("folderId", noticeRequestEH.getFolderId());
+                MDC.put("topic", "generation");
+                MDC.put("action", "received");
+                MDC.put("itemId", getItemId(noticeRequestEH));
+                log.info("Received Generation Message: notice {}", getItemId(noticeRequestEH));
+                MDC.remove("topic");
+                MDC.remove("action");
+
+                log.info("Pre-Process a new Generation Request Event: {}", noticeRequestEH);
+
+                Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
+                if (!constraintValidators.isEmpty()) {
+                    MDC.put("itemStatus", "EXCEPTION");
+                    log.error("Exception Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
+                    MDC.remove("itemStatus");
+                    throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(
+                            constraintValidators.stream().map(ConstraintViolation::getMessage).toList()));
+                }
+
+                folderId = noticeRequestEH.getFolderId();
+                noticeGenerationRequestItem = noticeRequestEH.getNoticeData();
+                errorId = noticeRequestEH.getErrorId();
+
+            } catch (JsonProcessingException e) {
+                try {
+                    paymentGenerationRequestErrorRepository.save(PaymentNoticeGenerationRequestError.builder()
+                            .errorDescription("Unable to read EH message content").folderId("UNKNOWN")
+                            .data(message != null ? aes256Utils.encrypt(message) : "EMPTY").createdAt(Instant.now())
+                            .numberOfAttempts(0).compressionError(false).build());
+                    MDC.put("itemStatus", "FAILED");
+                    log.info("Failed Generation Event: {}", e.getMessage(), e);
+                    MDC.remove("itemStatus");
+                } catch (Exception cryptException) {
+                    MDC.put("itemStatus", "EXCEPTION");
+                    log.error("Exception Generation Event: Unable to save unparsable data to error", cryptException);
+                    MDC.remove("itemStatus");
+                }
             }
-        } catch (Exception e) {
-            MDC.put("itemStatus", "EXCEPTION");
-            log.error("Exception Generation Event: {}", e.getMessage(), e);
-            MDC.remove("itemStatus");
-            throw e;
+
+            try {
+                if (noticeGenerationRequestItem != null && folderId != null) {
+                    generateNotice(noticeGenerationRequestItem, folderId, errorId);
+                    MDC.put("itemStatus", "SUCCESS");
+                    log.info("Success Generation Event: {}", noticeRequestEH);
+                    MDC.remove("itemStatus");
+                }
+            } catch (Exception e) {
+                MDC.put("itemStatus", "EXCEPTION");
+                log.error("Exception Generation Event: {}", e.getMessage(), e);
+                MDC.remove("itemStatus");
+                throw e;
+            }
+        } finally {
+            /*
+             * Kafka consumer threads are reused. Always clear the MDC at the consumer
+             * boundary to avoid leaking folder/item context into subsequent records or
+             * framework logs executed on the same thread.
+             */
+            MDC.clear();
         }
 
     }

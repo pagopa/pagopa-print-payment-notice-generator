@@ -24,6 +24,8 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import lombok.SneakyThrows;
 import org.apache.http.HttpStatus;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -140,6 +143,12 @@ class NoticeGenerationServiceImplTest {
                                 .build())
                 .build();
         noticeGenerationService.processNoticeGenerationEH(objectMapper.writeValueAsString(noticeRequestEH));
+        /*
+         * The Kafka consumer thread may be reused after processing the message. Folder
+         * and item context must therefore not leak outside the consumer boundary.
+         */
+        assertNull(MDC.get("folderId"));
+        assertNull(MDC.get("itemId"));
         verify(paymentGenerationRequestRepository).findAndAddItemById(any(), any());
         verify(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
         verify(institutionsStorageClient).getInstitutionData(any());
@@ -417,6 +426,14 @@ class NoticeGenerationServiceImplTest {
         String message = objectMapper.writeValueAsString(noticeRequestEH);
         assertThrows(CompletionEventPublicationException.class,
                 () -> noticeGenerationService.processNoticeGenerationEH(message));
+
+        /*
+         * MDC context must also be cleared when processing terminates with an
+         * exception, otherwise the reused Kafka consumer thread could leak this
+         * folder/item context.
+         */
+        assertNull(MDC.get("folderId"));
+        assertNull(MDC.get("itemId"));
 
         /*
          * The notice itself must have been generated and stored successfully.
