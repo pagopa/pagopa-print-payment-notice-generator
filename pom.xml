@@ -12,7 +12,7 @@
 
     <groupId>it.gov.pagopa</groupId>
     <artifactId>print-payment-notice-generator</artifactId>
-    <version>0.4.10-1-PIDM-2413-completing-status-indefinitely</version>
+    <version>0.4.10-2-PIDM-2413-completing-status-indefinitely</version>
     <name>pagopa-print-payment-notice-generator</name>
     <description>PagoPA Print Payment Notices Generator</description>
 
