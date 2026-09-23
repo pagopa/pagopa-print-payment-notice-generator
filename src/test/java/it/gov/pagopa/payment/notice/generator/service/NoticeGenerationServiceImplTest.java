@@ -657,6 +657,72 @@ class NoticeGenerationServiceImplTest {
         verify(paymentGenerationRequestRepository, never()).findAndIncrementNumberOfElementsFailedById(any());
         verifyNoInteractions(noticeRequestErrorProducer);
     }
+    
+    @SneakyThrows
+    @Test
+    void processNoticeGenerationShouldPropagateCompletionFailureWhenRollbackUpdatesNoRequest() {
+
+        doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
+
+        doReturn(CreditorInstitution.builder().webChannel(true).physicalChannel("Test").fullName("Test").logo("logo")
+                .cbill("Cbill").organization("ORG").build()).when(institutionsStorageClient).getInstitutionData(any());
+
+        doReturn(getPdfEngineResponse(HttpStatus.SC_OK, noticeFile.getPath())).when(pdfEngineClient).generatePDF(any(),
+                any());
+
+        doReturn(true).when(noticeStorageClient).savePdfToBlobStorage(any(), any(), any());
+
+        doReturn(1L).when(paymentGenerationRequestRepository).findAndAddItemById(any(), any());
+
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().id("test")
+                .status(PaymentGenerationRequestStatus.PROCESSING).numberOfElementsTotal(1).numberOfElementsFailed(0)
+                .items(Collections.singletonList("test")).build())).when(paymentGenerationRequestRepository)
+                .findById(any());
+
+        doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete(any());
+
+        /*
+         * Simulate a completion event publication failure after the folder has already
+         * been moved to COMPLETING.
+         */
+        doReturn(false).when(noticeRequestCompleteProducer).noticeComplete(any());
+
+        /*
+         * Simulate a compensation attempt that does not update any document, for
+         * example because the folder is no longer in COMPLETING status.
+         */
+        doReturn(0L).when(paymentGenerationRequestRepository).findAndSetToProcessing("test");
+
+        NoticeRequestEH noticeRequestEH = NoticeRequestEH.builder().folderId("test")
+                .noticeData(NoticeGenerationRequestItem.builder().templateId("template").data(NoticeRequestData
+                        .builder()
+                        .notice(Notice.builder().code("code").dueDate("24/10/2024").subject("subject")
+                                .paymentAmount(100L).build())
+                        .creditorInstitution(CreditorInstitution.builder().taxCode("taxCode").build())
+                        .debtor(Debtor.builder().taxCode("taxCode").address("address").city("city")
+                                .buildingNumber("101").postalCode("00135").province("RM").fullName("Test Name").build())
+                        .build()).build())
+                .build();
+
+        String message = objectMapper.writeValueAsString(noticeRequestEH);
+
+        assertThrows(CompletionEventPublicationException.class,
+                () -> noticeGenerationService.processNoticeGenerationEH(message));
+
+        /*
+         * Even if compensation does not update a document, the original completion
+         * publication failure must still be propagated and no notice failure created.
+         */
+        verify(paymentGenerationRequestRepository).findAndSetToComplete("test");
+        verify(noticeRequestCompleteProducer).noticeComplete(any());
+        verify(paymentGenerationRequestRepository).findAndSetToProcessing("test");
+
+        verifyNoInteractions(paymentGenerationRequestErrorRepository);
+        verify(paymentGenerationRequestRepository, never()).findAndIncrementNumberOfElementsFailedById(any());
+
+        assertNull(MDC.get("folderId"));
+        assertNull(MDC.get("itemId"));
+    }
 
     private PdfEngineResponse getPdfEngineResponse(int status, String pdfPath) {
         PdfEngineResponse pdfEngineResponse = new PdfEngineResponse();
@@ -667,5 +733,4 @@ class NoticeGenerationServiceImplTest {
         pdfEngineResponse.setStatusCode(status);
         return pdfEngineResponse;
     }
-
 }
