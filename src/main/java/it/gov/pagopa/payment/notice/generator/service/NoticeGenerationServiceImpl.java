@@ -164,6 +164,7 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     log.info("Recovered Generation Event - errorId: {}", errorId);
                     MDC.remove("itemStatus");
                 }
+                completeFolderIfReady(folderId);
             }
 
             return new File(pdfEngineResponse.getTempPdfPath());
@@ -276,33 +277,30 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             log.info("Massive Request PROCESSING: {}", folderId);
             MDC.remove("massiveStatus");
 
-            var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId)
-                    .orElseThrow();
-
-            if(PaymentGenerationRequestStatus.PROCESSING.equals(paymentNoticeGenerationRequest.getStatus())
-                    && paymentNoticeGenerationRequest.getNumberOfElementsTotal()
-                    <= paymentNoticeGenerationRequest.getItems().size() + paymentNoticeGenerationRequest.getNumberOfElementsFailed()
-                    && paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
-                paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
-                publishCompletionEventOrRollback(folderId, paymentNoticeGenerationRequest);
-                MDC.put("massiveStatus", "COMPLETING");
-                log.info("Massive Request COMPLETING: {}", folderId);
-                MDC.remove("massiveStatus");
-            }
-
-        } catch (CompletionEventPublicationException e) {
-
-            /*
-             * The PDF has already been generated and stored successfully. Propagate the
-             * completion publication error without converting it into a NOTICE_SAVE_ERROR,
-             * otherwise the notice would be incorrectly marked as failed.
-             */
-            log.error(e.getMessage(), e);
-            throw e;
-
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw new AppException(AppError.NOTICE_SAVE_ERROR, e);
+        }
+    }
+    
+    private void completeFolderIfReady(String folderId) {
+
+        var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId).orElseThrow();
+
+        boolean allNoticesProcessed = paymentNoticeGenerationRequest
+                .getNumberOfElementsTotal() <= paymentNoticeGenerationRequest.getItems().size()
+                        + paymentNoticeGenerationRequest.getNumberOfElementsFailed();
+
+        if (PaymentGenerationRequestStatus.PROCESSING.equals(paymentNoticeGenerationRequest.getStatus())
+                && allNoticesProcessed && paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
+
+            paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
+
+            publishCompletionEventOrRollback(folderId, paymentNoticeGenerationRequest);
+
+            MDC.put("massiveStatus", "COMPLETING");
+            log.info("Massive Request COMPLETING: {}", folderId);
+            MDC.remove("massiveStatus");
         }
     }
 
@@ -387,43 +385,49 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
     }
 
-    private void saveErrorEvent(
-            String errorId, String itemId, String folderId,
-            NoticeGenerationRequestItem noticeGenerationRequestItem,
-            String error) {
+    private void saveErrorEvent(String errorId, String itemId, String folderId,
+            NoticeGenerationRequestItem noticeGenerationRequestItem, String error) {
 
         try {
 
-            PaymentNoticeGenerationRequestError toSave =
-                    paymentGenerationRequestErrorRepository.findByErrorIdAndFolderId(errorId != null ?
-                            errorId : itemId, folderId).orElse(null);
+            PaymentNoticeGenerationRequestError toSave = paymentGenerationRequestErrorRepository
+                    .findByErrorIdAndFolderId(errorId != null ? errorId : itemId, folderId).orElse(null);
 
-            if(toSave == null) {
-                toSave = PaymentNoticeGenerationRequestError.builder()
-                        .errorId(itemId)
-                        .errorDescription(error)
+            if (toSave == null) {
+                toSave = PaymentNoticeGenerationRequestError.builder().errorId(itemId).errorDescription(error)
                         .folderId(folderId)
-                        .data(aes256Utils.encrypt(objectMapper
-                                .writeValueAsString(noticeGenerationRequestItem)))
-                        .createdAt(Instant.now())
-                        .numberOfAttempts(0)
-                        .compressionError(false)
-                        .build();
+                        .data(aes256Utils.encrypt(objectMapper.writeValueAsString(noticeGenerationRequestItem)))
+                        .createdAt(Instant.now()).numberOfAttempts(0).compressionError(false).build();
+
                 paymentGenerationRequestRepository.findAndIncrementNumberOfElementsFailedById(folderId);
             }
+
             toSave.setErrorDescription(error);
-            PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
-                    paymentGenerationRequestErrorRepository.save(toSave);
+
+            PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError = paymentGenerationRequestErrorRepository
+                    .save(toSave);
+
             noticeRequestErrorProducer.noticeError(paymentNoticeGenerationRequestError);
+
             MDC.put("itemStatus", "FAILED");
             log.info("Failed Generation Event: {}", toSave);
             MDC.remove("itemStatus");
+
+            completeFolderIfReady(folderId);
+
+        } catch (CompletionEventPublicationException e) {
+
+            /*
+             * The failure has already been recorded. If publication of the folder
+             * completion event fails, propagate the exception so that the generation
+             * message can be redelivered and completion retried.
+             */
+            throw e;
+
         } catch (Exception e) {
+
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
-                    folderId,
-                    getNoticeCode(noticeGenerationRequestItem),
-                    e
-            );
+                    folderId, getNoticeCode(noticeGenerationRequestItem), e);
         }
     }
 
