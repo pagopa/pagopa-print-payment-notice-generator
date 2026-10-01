@@ -116,10 +116,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             findFolderIfExists(folderId);
         }
 
-        String itemId = String.format("%s-%s-%s-%s", "pagopa-avviso",
-                noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode(),
-                getNoticeCode(noticeGenerationRequestItem),
-                noticeGenerationRequestItem.getTemplateId());
+        String itemId = "pagopa-avviso-" + noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode()
+                + "-" + getNoticeCode(noticeGenerationRequestItem) + "-" + noticeGenerationRequestItem.getTemplateId();
         MDC.put("itemStatus", "PROCESSING");
         log.info("Process a new Generation Event: {}", noticeGenerationRequestItem);
         MDC.remove("itemStatus");
