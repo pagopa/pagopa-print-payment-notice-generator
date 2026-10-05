@@ -96,5 +96,5 @@ jobs:
 
           cd ./infra
 
-          bash ./terraform.sh init "weu-${INPUT_ENV}"
-          bash ./terraform.sh apply "weu-${INPUT_ENV}" -auto-approve
+          bash ./terraform.sh init "itn-${INPUT_ENV}"
+          bash ./terraform.sh apply "itn-${INPUT_ENV}" -auto-approve
