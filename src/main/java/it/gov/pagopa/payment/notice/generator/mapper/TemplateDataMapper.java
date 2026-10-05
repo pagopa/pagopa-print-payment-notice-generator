@@ -37,7 +37,6 @@ public class TemplateDataMapper {
         String debtorTaxCode = noticeRequestData.getDebtor().getTaxCode();
         String fullName = noticeRequestData.getDebtor().getFullName();
         String subject = noticeRequestData.getNotice().getSubject();
-        String posteName = noticeRequestData.getCreditorInstitution().getPosteName();
         String posteAuthCode = noticeRequestData.getCreditorInstitution().getPosteAuth();
         String posteAccountNumber = noticeRequestData.getCreditorInstitution().getPosteAccountNumber();
         String posteName = noticeRequestData.getCreditorInstitution().getPosteName();
