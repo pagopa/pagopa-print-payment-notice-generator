@@ -44,6 +44,8 @@ public class CreditorInstitution {
 
     private String logo;
 
+    private String posteName;
+
     @Schema(description = "Installment poste auth code")
     private String posteAuth;
 
