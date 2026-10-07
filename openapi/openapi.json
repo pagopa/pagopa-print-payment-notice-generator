@@ -4,7 +4,7 @@
     "description": "PagoPA Print Payment Notices Generator",
     "termsOfService": "https://www.pagopa.gov.it/",
     "title": "pagopa-print-payment-notice-generator",
-    "version": "0.4.10-4-PIDM-2413-completing-status-indefinitely"
+    "version": "0.4.10-5-PIDM-2477-change-state-fail-on-notice-error"
   },
   "servers": [
     {
