@@ -10,6 +10,7 @@ import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestCompl
 import it.gov.pagopa.payment.notice.generator.events.producer.NoticeRequestErrorProducer;
 import it.gov.pagopa.payment.notice.generator.exception.AppError;
 import it.gov.pagopa.payment.notice.generator.exception.AppException;
+import it.gov.pagopa.payment.notice.generator.exception.CompletionEventPublicationException;
 import it.gov.pagopa.payment.notice.generator.mapper.TemplateDataMapper;
 import it.gov.pagopa.payment.notice.generator.model.NoticeGenerationRequestItem;
 import it.gov.pagopa.payment.notice.generator.model.NoticeRequestEH;
@@ -45,6 +46,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.getItemId;
+import static it.gov.pagopa.payment.notice.generator.util.CommonUtility.sanitizeLogParam;
 import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.createWorkingDirectory;
 
 /**
@@ -53,6 +55,9 @@ import static it.gov.pagopa.payment.notice.generator.util.WorkingDirectoryUtils.
 @Service
 @Slf4j
 public class NoticeGenerationServiceImpl implements NoticeGenerationService {
+    
+    private static final String MASSIVE_STATUS = "massiveStatus";
+    private static final String EXCEPTION      = "EXCEPTION";
 
     private final PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository;
     private final PaymentGenerationRequestRepository paymentGenerationRequestRepository;
@@ -115,10 +120,8 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             findFolderIfExists(folderId);
         }
 
-        String itemId = String.format("%s-%s-%s-%s", "pagopa-avviso",
-                noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode(),
-                getNoticeCode(noticeGenerationRequestItem),
-                noticeGenerationRequestItem.getTemplateId());
+        String itemId = "pagopa-avviso-" + noticeGenerationRequestItem.getData().getCreditorInstitution().getTaxCode()
+                + "-" + getNoticeCode(noticeGenerationRequestItem) + "-" + noticeGenerationRequestItem.getTemplateId();
         MDC.put("itemStatus", "PROCESSING");
         log.info("Process a new Generation Event: {}", noticeGenerationRequestItem);
         MDC.remove("itemStatus");
@@ -165,9 +168,20 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
                     log.info("Recovered Generation Event - errorId: {}", errorId);
                     MDC.remove("itemStatus");
                 }
+                completeFolderIfReady(folderId);
             }
 
             return new File(pdfEngineResponse.getTempPdfPath());
+
+        } catch (CompletionEventPublicationException e) {
+
+            /*
+             * The notice itself was successfully generated and stored. Do not create a
+             * notice error or increment numberOfElementsFailed. Propagating the exception
+             * allows the generation message to be redelivered and the completion
+             * publication to be retried.
+             */
+            throw e;
 
         } catch (Exception e) {
             if(folderId != null) {
@@ -263,27 +277,34 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
             }
 
             paymentGenerationRequestRepository.findAndAddItemById(folderId, itemId);
-            MDC.put("massiveStatus", "PROCESSING");
-            log.info("Massive Request PROCESSING: {}", folderId);
-            MDC.remove("massiveStatus");
-
-            var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId)
-                    .orElseThrow();
-
-            if(paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.PROCESSING)
-                    && paymentNoticeGenerationRequest.getNumberOfElementsTotal()
-                    <= paymentNoticeGenerationRequest.getItems().size() + paymentNoticeGenerationRequest.getNumberOfElementsFailed()
-                    && paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
-                paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
-                noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
-                MDC.put("massiveStatus", "COMPLETING");
-                log.info("Massive Request COMPLETING: {}", folderId);
-                MDC.remove("massiveStatus");
-            }
+            MDC.put(MASSIVE_STATUS, "PROCESSING");
+            log.info("Massive Request PROCESSING: {}", sanitizeLogParam(folderId));
+            MDC.remove(MASSIVE_STATUS);
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw new AppException(AppError.NOTICE_SAVE_ERROR, e);
+        }
+    }
+    
+    private void completeFolderIfReady(String folderId) {
+
+        var paymentNoticeGenerationRequest = paymentGenerationRequestRepository.findById(folderId).orElseThrow();
+
+        boolean allNoticesProcessed = paymentNoticeGenerationRequest
+                .getNumberOfElementsTotal() <= paymentNoticeGenerationRequest.getItems().size()
+                        + paymentNoticeGenerationRequest.getNumberOfElementsFailed();
+
+        if (PaymentGenerationRequestStatus.PROCESSING.equals(paymentNoticeGenerationRequest.getStatus())
+                && allNoticesProcessed && paymentGenerationRequestRepository.findAndSetToComplete(folderId) > 0) {
+
+            paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.COMPLETING);
+
+            publishCompletionEventOrRollback(folderId, paymentNoticeGenerationRequest);
+
+            MDC.put(MASSIVE_STATUS, "COMPLETING");
+            log.info("Massive Request COMPLETING: {}", sanitizeLogParam(folderId));
+            MDC.remove(MASSIVE_STATUS);
         }
     }
 
@@ -296,112 +317,121 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
     public void processNoticeGenerationEH(String message) {
         MDC.clear();
 
-
-        String folderId = null;
-        NoticeGenerationRequestItem noticeGenerationRequestItem = null;
-        String errorId = null;
-        NoticeRequestEH noticeRequestEH = null;
-
         try {
+            String folderId = null;
+            NoticeGenerationRequestItem noticeGenerationRequestItem = null;
+            String errorId = null;
+            NoticeRequestEH noticeRequestEH = null;
 
-            noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
-            MDC.put("folderId", noticeRequestEH.getFolderId());
-            MDC.put("topic", "generation");
-            MDC.put("action", "received");
-            MDC.put("itemId", getItemId(noticeRequestEH));
-            log.info("Received Generation Message: notice {}", getItemId(noticeRequestEH));
-            MDC.remove("topic");
-            MDC.remove("action");
-
-            log.info("Pre-Process a new Generation Request Event: {}", noticeRequestEH);
-
-            Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
-            if(!constraintValidators.isEmpty()) {
-                MDC.put("itemStatus", "EXCEPTION");
-                log.error("Exception Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
-                MDC.remove("itemStatus");
-                throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(
-                        constraintValidators.stream().map(ConstraintViolation::getMessage).toList()));
-            }
-
-            folderId = noticeRequestEH.getFolderId();
-            noticeGenerationRequestItem = noticeRequestEH.getNoticeData();
-            errorId = noticeRequestEH.getErrorId();
-
-        } catch (JsonProcessingException e) {
             try {
-                paymentGenerationRequestErrorRepository.save(
-                        PaymentNoticeGenerationRequestError.builder()
-                                .errorDescription("Unable to read EH message content")
-                                .folderId("UNKNOWN")
-                                .data(message != null ? aes256Utils.encrypt(message) : "EMPTY")
-                                .createdAt(Instant.now())
-                                .numberOfAttempts(0)
-                                .compressionError(false)
-                                .build());
-                MDC.put("itemStatus", "FAILED");
-                log.info("Failed Generation Event: {}", e.getMessage(), e);
-                MDC.remove("itemStatus");
-            } catch (Exception cryptException) {
-                MDC.put("itemStatus", "EXCEPTION");
-                log.error("Exception Generation Event: Unable to save unparsable data to error", cryptException);
-                MDC.remove("itemStatus");
-            }
-        }
 
-        try {
-            if(noticeGenerationRequestItem != null && folderId != null) {
-                generateNotice(noticeGenerationRequestItem, folderId, errorId);
-                MDC.put("itemStatus", "SUCCESS");
-                log.info("Success Generation Event: {}", noticeRequestEH);
-                MDC.remove("itemStatus");
+                noticeRequestEH = objectMapper.readValue(message, NoticeRequestEH.class);
+                MDC.put("folderId", noticeRequestEH.getFolderId());
+                MDC.put("topic", "generation");
+                MDC.put("action", "received");
+                MDC.put("itemId", getItemId(noticeRequestEH));
+                log.info("Received Generation Message: notice {}", getItemId(noticeRequestEH));
+                MDC.remove("topic");
+                MDC.remove("action");
+
+                log.info("Pre-Process a new Generation Request Event: {}", noticeRequestEH);
+
+                Set<ConstraintViolation<NoticeRequestEH>> constraintValidators = validator.validate(noticeRequestEH);
+                if (!constraintValidators.isEmpty()) {
+                    MDC.put("itemStatus", EXCEPTION);
+                    log.error("Exception Generation Event: {}", AppError.MESSAGE_VALIDATION_ERROR.getTitle());
+                    MDC.remove("itemStatus");
+                    throw new AppException(AppError.MESSAGE_VALIDATION_ERROR, objectMapper.writeValueAsString(
+                            constraintValidators.stream().map(ConstraintViolation::getMessage).toList()));
+                }
+
+                folderId = noticeRequestEH.getFolderId();
+                noticeGenerationRequestItem = noticeRequestEH.getNoticeData();
+                errorId = noticeRequestEH.getErrorId();
+
+            } catch (JsonProcessingException e) {
+                try {
+                    paymentGenerationRequestErrorRepository.save(PaymentNoticeGenerationRequestError.builder()
+                            .errorDescription("Unable to read EH message content").folderId("UNKNOWN")
+                            .data(message != null ? aes256Utils.encrypt(message) : "EMPTY").createdAt(Instant.now())
+                            .numberOfAttempts(0).compressionError(false).build());
+                    MDC.put("itemStatus", "FAILED");
+                    log.info("Failed Generation Event: {}", e.getMessage(), e);
+                    MDC.remove("itemStatus");
+                } catch (Exception cryptException) {
+                    MDC.put("itemStatus", EXCEPTION);
+                    log.error("Exception Generation Event: Unable to save unparsable data to error", cryptException);
+                    MDC.remove("itemStatus");
+                }
             }
-        } catch (Exception e) {
-            MDC.put("itemStatus", "EXCEPTION");
-            log.error("Exception Generation Event: {}", e.getMessage(), e);
-            MDC.remove("itemStatus");
-            throw e;
+
+            try {
+                if (noticeGenerationRequestItem != null && folderId != null) {
+                    generateNotice(noticeGenerationRequestItem, folderId, errorId);
+                    MDC.put("itemStatus", "SUCCESS");
+                    log.info("Success Generation Event: {}", noticeRequestEH);
+                    MDC.remove("itemStatus");
+                }
+            } catch (Exception e) {
+                MDC.put("itemStatus", EXCEPTION);
+                log.error("Exception Generation Event: {}", e.getMessage(), e);
+                MDC.remove("itemStatus");
+                throw e;
+            }
+        } finally {
+            /*
+             * Kafka consumer threads are reused. Always clear the MDC at the consumer
+             * boundary to avoid leaking folder/item context into subsequent records or
+             * framework logs executed on the same thread.
+             */
+            MDC.clear();
         }
 
     }
 
-    private void saveErrorEvent(
-            String errorId, String itemId, String folderId,
-            NoticeGenerationRequestItem noticeGenerationRequestItem,
-            String error) {
+    private void saveErrorEvent(String errorId, String itemId, String folderId,
+            NoticeGenerationRequestItem noticeGenerationRequestItem, String error) {
 
         try {
 
-            PaymentNoticeGenerationRequestError toSave =
-                    paymentGenerationRequestErrorRepository.findByErrorIdAndFolderId(errorId != null ?
-                            errorId : itemId, folderId).orElse(null);
+            PaymentNoticeGenerationRequestError toSave = paymentGenerationRequestErrorRepository
+                    .findByErrorIdAndFolderId(errorId != null ? errorId : itemId, folderId).orElse(null);
 
-            if(toSave == null) {
-                toSave = PaymentNoticeGenerationRequestError.builder()
-                        .errorId(itemId)
-                        .errorDescription(error)
+            if (toSave == null) {
+                toSave = PaymentNoticeGenerationRequestError.builder().errorId(itemId).errorDescription(error)
                         .folderId(folderId)
-                        .data(aes256Utils.encrypt(objectMapper
-                                .writeValueAsString(noticeGenerationRequestItem)))
-                        .createdAt(Instant.now())
-                        .numberOfAttempts(0)
-                        .compressionError(false)
-                        .build();
+                        .data(aes256Utils.encrypt(objectMapper.writeValueAsString(noticeGenerationRequestItem)))
+                        .createdAt(Instant.now()).numberOfAttempts(0).compressionError(false).build();
+
                 paymentGenerationRequestRepository.findAndIncrementNumberOfElementsFailedById(folderId);
             }
+
             toSave.setErrorDescription(error);
-            PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
-                    paymentGenerationRequestErrorRepository.save(toSave);
+
+            PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError = paymentGenerationRequestErrorRepository
+                    .save(toSave);
+
             noticeRequestErrorProducer.noticeError(paymentNoticeGenerationRequestError);
+
             MDC.put("itemStatus", "FAILED");
             log.info("Failed Generation Event: {}", toSave);
             MDC.remove("itemStatus");
+
+            completeFolderIfReady(folderId);
+
+        } catch (CompletionEventPublicationException e) {
+
+            /*
+             * The failure has already been recorded. If publication of the folder
+             * completion event fails, propagate the exception so that the generation
+             * message can be redelivered and completion retried.
+             */
+            throw e;
+
         } catch (Exception e) {
+
             log.error("Unable to save notice data into error repository for notice with folder {} and noticeId {}",
-                    folderId,
-                    getNoticeCode(noticeGenerationRequestItem),
-                    e
-            );
+                    sanitizeLogParam(folderId), getNoticeCode(noticeGenerationRequestItem), e);
         }
     }
 
@@ -409,6 +439,77 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
         PaymentNoticeGenerationRequest ignored =
                 paymentGenerationRequestRepository.findById(folderId)
                         .orElseThrow(() -> new AppException(AppError.FOLDER_NOT_AVAILABLE));
+    }
+    
+    /**
+     * Publishes the completion event required to start the folder compression.
+     *
+     * If the publication fails, either by throwing an exception or by returning
+     * false, the folder is restored to PROCESSING so that the completion flow can
+     * be retried.
+     *
+     * @param folderId                       folder being completed
+     * @param paymentNoticeGenerationRequest completed generation request
+     * @throws CompletionEventPublicationException if the completion event cannot be
+     *                                             published
+     */
+    private void publishCompletionEventOrRollback(String folderId,
+            PaymentNoticeGenerationRequest paymentNoticeGenerationRequest) {
+
+        boolean completionEventSent;
+
+        try {
+            completionEventSent = noticeRequestCompleteProducer.noticeComplete(paymentNoticeGenerationRequest);
+
+        } catch (Exception e) {
+
+            CompletionEventPublicationException publicationException = new CompletionEventPublicationException(folderId,
+                    e);
+
+            /*
+             * Case 1: the event publication throws an exception. Restore PROCESSING so that
+             * a subsequent delivery can retry the completion transition and event
+             * publication.
+             */
+            rollbackCompletionTransition(folderId, publicationException);
+
+            throw publicationException;
+        }
+
+        if (!completionEventSent) {
+
+            CompletionEventPublicationException publicationException = new CompletionEventPublicationException(
+                    folderId);
+
+            /*
+             * Case 2: the producer reports the publication failure by returning false.
+             * Restore PROCESSING so that a subsequent delivery can retry the completion
+             * transition and event publication.
+             */
+            rollbackCompletionTransition(folderId, publicationException);
+
+            throw publicationException;
+        }
+    }
+
+    private void rollbackCompletionTransition(String folderId,
+            CompletionEventPublicationException publicationException) {
+
+        try {
+
+            long updated = paymentGenerationRequestRepository.findAndSetToProcessing(folderId);
+
+            if (updated == 0) {
+                log.warn("Unable to rollback completion transition because no COMPLETING request was updated");
+            }
+
+        } catch (Exception rollbackException) {
+
+            publicationException.addSuppressed(rollbackException);
+
+            log.error("Unable to rollback completion transition after completion event publication failure",
+                    rollbackException);
+        }
     }
 
 }

@@ -18,11 +18,20 @@ public interface PaymentGenerationRequestRepository extends MongoRepository<Paym
     @Update("{ '$set': { 'status' : 'COMPLETING' } }")
     long findAndSetToComplete(String folderId);
 
-    @Update("{ '$inc' : { 'numberOfElementsFailed' : 1 } }")
+    @Query("{'id' : ?0, 'status' : { '$in' : ['INSERTED', 'PROCESSING'] }}")
+    @Update("{ '$set' : { 'status' : 'PROCESSING' }, " + "'$inc' : { 'numberOfElementsFailed' : 1 } }")
     long findAndIncrementNumberOfElementsFailedById(String folderId);
 
     @Query("{'id' : ?0, 'numberOfElementsFailed': { '$gte': 1 } }")
     @Update("{ '$inc' : { 'numberOfElementsFailed' : -1 } }")
     void findAndDecrementNumberOfElementsFailedById(String folderId);
+    
+    /**
+     * Rolls back a folder from COMPLETING to PROCESSING when the completion event
+     * cannot be published.
+     */
+    @Query("{'id' : ?0, 'status' : 'COMPLETING' }")
+    @Update("{ '$set': { 'status' : 'PROCESSING' } }")
+    long findAndSetToProcessing(String folderId);
 
 }
