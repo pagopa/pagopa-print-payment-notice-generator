@@ -161,8 +161,9 @@ class NoticeGenerationServiceImplTest {
     @Test
     void processNoticeGenerationShouldReturnKOOnPDfEngineBadRequest() {
 
-        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().build())).when(paymentGenerationRequestRepository)
-                .findById(any());
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.PROCESSING)
+                .numberOfElementsTotal(2).numberOfElementsFailed(1).items(Collections.emptyList()).build()))
+                .when(paymentGenerationRequestRepository).findById(any());
         doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
         doReturn(CreditorInstitution.builder().webChannel(true).physicalChannel("Test").fullName("Test").logo("logo")
                 .cbill("Cbill").organization("ORG").posteAccountNumber("131213").posteAuth("322323").build())
@@ -187,7 +188,8 @@ class NoticeGenerationServiceImplTest {
                 .build();
         String message = objectMapper.writeValueAsString(noticeRequestEH);
         assertThrows(AppException.class, () -> noticeGenerationService.processNoticeGenerationEH(message));
-        verify(paymentGenerationRequestRepository).findById(any());
+        verify(paymentGenerationRequestRepository, times(2)).findById(any());
+        verify(paymentGenerationRequestRepository, never()).findAndSetToComplete(any());
         verify(institutionsStorageClient).getInstitutionData(any());
         verify(noticeTemplateStorageClient).getTemplate(any());
         verify(pdfEngineClient).generatePDF(any(), any());
@@ -268,8 +270,11 @@ class NoticeGenerationServiceImplTest {
     @Test
     void processNoticeGenerationShouldReturnKOOnExtraValidation() {
 
-        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().build())).when(paymentGenerationRequestRepository)
-                .findById(any());
+        when(paymentGenerationRequestRepository.findById(any())).thenReturn(
+                Optional.of(PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.INSERTED)
+                        .numberOfElementsTotal(2).numberOfElementsFailed(0).items(Collections.emptyList()).build()),
+                Optional.of(PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.PROCESSING)
+                        .numberOfElementsTotal(2).numberOfElementsFailed(1).items(Collections.emptyList()).build()));
         doReturn(CreditorInstitution.builder().webChannel(true).physicalChannel("Test").fullName("Test").logo("logo")
                 .cbill("Cbill").organization("ORG").posteAccountNumber("131213").posteAuth("322323").build())
                 .when(institutionsStorageClient).getInstitutionData(any());
@@ -302,7 +307,8 @@ class NoticeGenerationServiceImplTest {
         String message = objectMapper.writeValueAsString(noticeRequestEH);
         assertThrows(AppException.class, () -> noticeGenerationService.processNoticeGenerationEH(message));
 
-        verify(paymentGenerationRequestRepository).findById(any());
+        verify(paymentGenerationRequestRepository, times(2)).findById(any());
+        verify(paymentGenerationRequestRepository, never()).findAndSetToComplete(any());
         verify(institutionsStorageClient).getInstitutionData(any());
         verify(paymentGenerationRequestErrorRepository).save(any());
         verify(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById(any());
@@ -722,6 +728,210 @@ class NoticeGenerationServiceImplTest {
 
         assertNull(MDC.get("folderId"));
         assertNull(MDC.get("itemId"));
+    }
+    
+    @SneakyThrows
+    @Test
+    void processNoticeGenerationShouldCompleteFolderWhenAllNoticesFail() {
+
+        /*
+         * First read: the folder has just been created and no notice has been accounted
+         * for yet.
+         *
+         * Second read: the only notice has failed, therefore the failure update has
+         * moved the folder to PROCESSING and incremented the failed counter.
+         */
+        when(paymentGenerationRequestRepository.findById("test")).thenReturn(
+                Optional.of(PaymentNoticeGenerationRequest.builder().id("test")
+                        .status(PaymentGenerationRequestStatus.INSERTED).numberOfElementsTotal(1)
+                        .numberOfElementsFailed(0).items(Collections.emptyList()).build()),
+                Optional.of(PaymentNoticeGenerationRequest.builder().id("test")
+                        .status(PaymentGenerationRequestStatus.PROCESSING).numberOfElementsTotal(1)
+                        .numberOfElementsFailed(1).items(Collections.emptyList()).build()));
+
+        doReturn(templateFile).when(noticeTemplateStorageClient).getTemplate(any());
+
+        doReturn(CreditorInstitution.builder().webChannel(true).physicalChannel("Test").fullName("Test").logo("logo")
+                .cbill("Cbill").organization("ORG").build()).when(institutionsStorageClient).getInstitutionData(any());
+
+        // Force the only notice to fail before it can be stored.
+        doReturn(getPdfEngineResponse(HttpStatus.SC_INTERNAL_SERVER_ERROR, noticeFile.getPath())).when(pdfEngineClient)
+                .generatePDF(any(), any());
+
+        doReturn(Optional.empty()).when(paymentGenerationRequestErrorRepository).findByErrorIdAndFolderId(any(), any());
+
+        when(paymentGenerationRequestErrorRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        doReturn(true).when(noticeRequestErrorProducer).noticeError(any());
+
+        // The failed notice completes the folder: PROCESSING -> COMPLETING.
+        doReturn(1L).when(paymentGenerationRequestRepository).findAndSetToComplete("test");
+
+        doReturn(true).when(noticeRequestCompleteProducer).noticeComplete(any());
+
+        NoticeRequestEH noticeRequestEH = NoticeRequestEH.builder().folderId("test")
+                .noticeData(NoticeGenerationRequestItem.builder().templateId("template").data(NoticeRequestData
+                        .builder()
+                        .notice(Notice.builder().code("code").dueDate("24/10/2024").subject("subject")
+                                .paymentAmount(100L).build())
+                        .creditorInstitution(CreditorInstitution.builder().taxCode("taxCode").build())
+                        .debtor(Debtor.builder().taxCode("taxCode").address("address").city("city")
+                                .buildingNumber("101").postalCode("00135").province("RM").fullName("Test Name").build())
+                        .build()).build())
+                .build();
+
+        String message = objectMapper.writeValueAsString(noticeRequestEH);
+
+        /*
+         * The notice generation itself still fails. What we are validating here is that
+         * the massive request nevertheless reaches the completion flow.
+         */
+        assertThrows(AppException.class, () -> noticeGenerationService.processNoticeGenerationEH(message));
+
+        verify(paymentGenerationRequestRepository, times(2)).findById("test");
+
+        // The failure must be accounted for exactly once.
+        verify(paymentGenerationRequestRepository).findAndIncrementNumberOfElementsFailedById("test");
+
+        verify(paymentGenerationRequestErrorRepository).save(any());
+        verify(noticeRequestErrorProducer).noticeError(any());
+
+        // Since failed == total, the folder must no longer remain INSERTED.
+        verify(paymentGenerationRequestRepository).findAndSetToComplete("test");
+
+        verify(noticeRequestCompleteProducer)
+                .noticeComplete(argThat(request -> PaymentGenerationRequestStatus.COMPLETING.equals(request.getStatus())
+                        && Integer.valueOf(1).equals(request.getNumberOfElementsFailed())
+                        && request.getItems().isEmpty()));
+
+        // No PDF was successfully generated/stored.
+        verify(paymentGenerationRequestRepository, never()).findAndAddItemById(any(), any());
+
+        verifyNoInteractions(noticeStorageClient);
+    }
+    
+    @SneakyThrows
+    @Test
+    void processNoticeGenerationShouldCompleteFolderWhenLastNoticeFails() {
+
+        /*
+         * One notice has already been generated successfully.
+         * The current notice is the last one and will fail.
+         */
+        when(paymentGenerationRequestRepository.findById("test")).thenReturn(
+                Optional.of(PaymentNoticeGenerationRequest.builder()
+                        .id("test")
+                        .status(PaymentGenerationRequestStatus.PROCESSING)
+                        .numberOfElementsTotal(2)
+                        .numberOfElementsFailed(0)
+                        .items(Collections.singletonList("successful-notice"))
+                        .build()),
+                Optional.of(PaymentNoticeGenerationRequest.builder()
+                        .id("test")
+                        .status(PaymentGenerationRequestStatus.PROCESSING)
+                        .numberOfElementsTotal(2)
+                        .numberOfElementsFailed(1)
+                        .items(Collections.singletonList("successful-notice"))
+                        .build()));
+
+        doReturn(templateFile)
+                .when(noticeTemplateStorageClient)
+                .getTemplate(any());
+
+        doReturn(CreditorInstitution.builder()
+                .webChannel(true)
+                .physicalChannel("Test")
+                .fullName("Test")
+                .logo("logo")
+                .cbill("Cbill")
+                .organization("ORG")
+                .build())
+                .when(institutionsStorageClient)
+                .getInstitutionData(any());
+
+        // The second and last notice fails.
+        doReturn(getPdfEngineResponse(
+                HttpStatus.SC_INTERNAL_SERVER_ERROR,
+                noticeFile.getPath()))
+                .when(pdfEngineClient)
+                .generatePDF(any(), any());
+
+        doReturn(Optional.empty())
+                .when(paymentGenerationRequestErrorRepository)
+                .findByErrorIdAndFolderId(any(), any());
+
+        when(paymentGenerationRequestErrorRepository.save(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        doReturn(true)
+                .when(noticeRequestErrorProducer)
+                .noticeError(any());
+
+        doReturn(1L)
+                .when(paymentGenerationRequestRepository)
+                .findAndSetToComplete("test");
+
+        doReturn(true)
+                .when(noticeRequestCompleteProducer)
+                .noticeComplete(any());
+
+        NoticeRequestEH noticeRequestEH = NoticeRequestEH.builder()
+                .folderId("test")
+                .noticeData(NoticeGenerationRequestItem.builder()
+                        .templateId("template")
+                        .data(NoticeRequestData.builder()
+                                .notice(Notice.builder()
+                                        .code("code")
+                                        .dueDate("24/10/2024")
+                                        .subject("subject")
+                                        .paymentAmount(100L)
+                                        .build())
+                                .creditorInstitution(
+                                        CreditorInstitution.builder()
+                                                .taxCode("taxCode")
+                                                .build())
+                                .debtor(Debtor.builder()
+                                        .taxCode("taxCode")
+                                        .address("address")
+                                        .city("city")
+                                        .buildingNumber("101")
+                                        .postalCode("00135")
+                                        .province("RM")
+                                        .fullName("Test Name")
+                                        .build())
+                                .build())
+                        .build())
+                .build();
+
+        String message = objectMapper.writeValueAsString(noticeRequestEH);
+
+        assertThrows(AppException.class,
+                () -> noticeGenerationService.processNoticeGenerationEH(message));
+
+        verify(paymentGenerationRequestRepository, times(2))
+                .findById("test");
+
+        verify(paymentGenerationRequestRepository)
+                .findAndIncrementNumberOfElementsFailedById("test");
+
+        /*
+         * 1 success + 1 failure == total, therefore the folder must complete.
+         */
+        verify(paymentGenerationRequestRepository)
+                .findAndSetToComplete("test");
+
+        verify(noticeRequestCompleteProducer)
+                .noticeComplete(argThat(request ->
+                        PaymentGenerationRequestStatus.COMPLETING.equals(request.getStatus())
+                                && Integer.valueOf(1).equals(request.getNumberOfElementsFailed())
+                                && request.getItems().size() == 1
+                                && request.getItems().contains("successful-notice")));
+
+        // The current failed notice must not be added to the successful items.
+        verify(paymentGenerationRequestRepository, never())
+                .findAndAddItemById(any(), any());
+
+        verifyNoInteractions(noticeStorageClient);
     }
 
     private PdfEngineResponse getPdfEngineResponse(int status, String pdfPath) {
