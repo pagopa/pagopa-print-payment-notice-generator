@@ -47,17 +47,17 @@ public class NoticeStorageClient {
      */
     public boolean savePdfToBlobStorage(InputStream pdf, String folderId, String fileName) {
 
-        //Get a reference to a blob
-        BlobClient blobClient = blobContainerClient.getBlobClient(String.join("/", folderId,
-                fileName.concat(".pdf")));
+        // Get a reference to a blob
+        BlobClient blobClient = blobContainerClient.getBlobClient(String.join("/", folderId, fileName.concat(".pdf")));
 
-        //Upload the blob
-        Response<BlockBlobItem> blockBlobItemResponse = blobClient.uploadWithResponse(
-                new BlobParallelUploadOptions(
-                        pdf
-                ), null, null);
+        // Upload is intentionally performed without conditional request headers.
+        // If the same folderId/itemId is processed again after a message redelivery,
+        // Azure Blob Storage overwrites the existing blob at the same path.
+        // This makes the blob write idempotent for generation retries.
+        Response<BlockBlobItem> blockBlobItemResponse = blobClient
+                .uploadWithResponse(new BlobParallelUploadOptions(pdf), null, null);
 
-        //Build response accordingly
+        // Build response accordingly
         int statusCode = blockBlobItemResponse.getStatusCode();
 
         return statusCode == HttpStatus.CREATED.value();
