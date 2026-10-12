@@ -267,12 +267,11 @@ public class NoticeGenerationServiceImpl implements NoticeGenerationService {
 
     }
 
-    private void addNoticeIntoFolder(String itemId, String folderId,
-                                     PdfEngineResponse pdfEngineResponse) {
+    private void addNoticeIntoFolder(String itemId, String folderId, PdfEngineResponse pdfEngineResponse) {
         try (BufferedInputStream pdfStream = new BufferedInputStream(
                 new FileInputStream(pdfEngineResponse.getTempPdfPath()))) {
 
-            if(!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, itemId)) {
+            if (!noticeStorageClient.savePdfToBlobStorage(pdfStream, folderId, itemId)) {
                 throw new RuntimeException("Encountered error during blob saving");
             }
 
