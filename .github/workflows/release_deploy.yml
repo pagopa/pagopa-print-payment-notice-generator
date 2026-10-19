@@ -115,7 +115,7 @@ jobs:
           semver: ${{ needs.setup.outputs.semver }}
           github_token: ${{ secrets.BOT_TOKEN_GITHUB }}
           beta: ${{ inputs.beta }}
-          prerelease: ${{ inputs.environment != 'prod' }}
+          prerelease: ${{ needs.setup.outputs.semver == 'buildNumber' }}
           skip_ci: false
 
   image:
