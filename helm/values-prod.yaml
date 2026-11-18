@@ -74,16 +74,15 @@ microservice-chart:
     cooldownPeriod: 300 # seconds
     triggers:
       - type: cpu
+        metricType: Utilization # Allowed types are 'Utilization' or 'AverageValue'
         metadata:
-          # Required
-          type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
       - type: memory
+        metricType: Utilization # Allowed types are 'Utilization' or 'AverageValue'
         metadata:
-          # Required
-          type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "80"
   envConfig:
+    JAVA_OPTS: "-XX:-UseBASE64Intrinsics"
     ASPNETCORE_URLS: "http://*:8080"
     WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-prod'
