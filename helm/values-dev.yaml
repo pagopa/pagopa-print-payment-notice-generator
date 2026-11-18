@@ -79,7 +79,7 @@ microservice-chart:
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
   envConfig:
-    JAVA_TOOL_OPTIONS: "-XX:-UseBASE64Intrinsics"
+    JAVA_OPTS: "-XX:-UseBASE64Intrinsics"
     ASPNETCORE_URLS: "http://*:8080"
     WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-dev'
