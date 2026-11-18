@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-generator"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
-    tag: "0.4.13"
+    tag: "0.4.13-1-PIDM-2620-cve-workaround"
     pullPolicy: Always
   livenessProbe:
     httpGet:
@@ -78,7 +78,6 @@ microservice-chart:
         metadata:
           value: "75"
   envConfig:
-    JAVA_OPTS: "-XX:-UseBASE64Intrinsics"
     ASPNETCORE_URLS: "http://*:8080"
     WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-dev'
