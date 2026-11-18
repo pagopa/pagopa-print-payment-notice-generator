@@ -25,4 +25,4 @@ COPY --chown=spring:spring  --from=builder application/ ./
 
 EXPOSE 8080
 
-ENTRYPOINT ["java","--enable-preview","org.springframework.boot.loader.launch.JarLauncher"]
+ENTRYPOINT ["java","--enable-preview", "-XX:-UseBASE64Intrinsics","org.springframework.boot.loader.launch.JarLauncher"]

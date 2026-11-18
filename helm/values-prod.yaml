@@ -82,7 +82,6 @@ microservice-chart:
         metadata:
           value: "80"
   envConfig:
-    JAVA_OPTS: "-XX:-UseBASE64Intrinsics"
     ASPNETCORE_URLS: "http://*:8080"
     WEBSITE_SITE_NAME: 'print-payment-notice-generator' # required to show cloud role name in application insights
     ENV: 'azure-prod'
