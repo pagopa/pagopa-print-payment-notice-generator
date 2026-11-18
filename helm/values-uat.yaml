@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-generator"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-generator
-    tag: "0.4.13-1-PIDM-2620-cve-workaround"
+    tag: "0.4.14"
     pullPolicy: Always
   livenessProbe:
     httpGet:
